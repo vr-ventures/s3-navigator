@@ -1,0 +1,52 @@
+{
+  "name": "s3-navigator",
+  "version": "1.0.0",
+  "description": "A universal S3 file browser and viewer with support for JSON, Markdown, Images, and folder navigation",
+  "main": "dist/main.js",
+  "homepage": "./",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"npm run react-start\" \"npm run electron-dev\"",
+    "react-start": "react-scripts start",
+    "electron-dev": "cross-env NODE_ENV=development electron .",
+    "build": "react-scripts build && tsc",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "keywords": ["electron", "s3", "aws", "file-browser", "json-viewer", "markdown", "navigator"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "concurrently": "^8.0.0",
+    "cross-env": "^7.0.0",
+    "electron": "^29.1.0",
+    "react-scripts": "^5.0.1",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/credential-providers": "^3.0.0",
+    "@uiw/react-json-view": "^2.0.0",
+    "jsonpath-plus": "^10.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.0",
+    "remark-gfm": "^4.0.0",
+    "rehype-highlight": "^7.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
