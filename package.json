@@ -10,12 +10,66 @@
     "react-start": "react-scripts start",
     "electron-dev": "cross-env NODE_ENV=development electron .",
     "build": "react-scripts build && tsc",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:mac-dmg": "npm run build && electron-builder --mac --publish=never",
+    "build:all": "npm run build && electron-builder --mac --win --linux",
+    "dist": "npm run build && electron-builder",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
   "keywords": ["electron", "s3", "aws", "file-browser", "json-viewer", "markdown", "navigator"],
   "author": "Your Name",
   "license": "MIT",
+  "build": {
+    "appId": "com.s3navigator.app",
+    "productName": "S3 Navigator",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "build/**/*",
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "S3 Navigator",
+      "backgroundColor": "#ffffff",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 140,
+          "y": 200,
+          "type": "file"
+        },
+        {
+          "x": 400,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
@@ -23,17 +77,18 @@
     "concurrently": "^8.0.0",
     "cross-env": "^7.0.0",
     "electron": "^29.1.0",
+    "electron-builder": "^24.13.3",
     "react-scripts": "^5.0.1",
     "typescript": "^5.3.3"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/credential-providers": "^3.0.0",
-    "@uiw/react-json-view": "^2.0.0",
+    "@uiw/react-json-view": "^2.0.0-alpha.32",
     "jsonpath-plus": "^10.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-markdown": "^9.0.0",
+    "react-markdown": "^10.0.0",
     "remark-gfm": "^4.0.0",
     "rehype-highlight": "^7.0.0"
   },

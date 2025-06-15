@@ -1,0 +1,41 @@
+directories:
+  output: release
+  buildResources: build
+files:
+  - filter:
+      - build/**/*
+      - build/**/*
+      - dist/**/*
+      - node_modules/**/*
+      - package.json
+extraMetadata:
+  main: build/electron.js
+appId: com.s3navigator.app
+productName: S3 Navigator
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+dmg:
+  title: S3 Navigator
+  backgroundColor: '#ffffff'
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 140
+      'y': 200
+      type: file
+    - x: 400
+      'y': 200
+      type: link
+      path: /Applications
+win:
+  target: nsis
+linux:
+  target: AppImage
+extends: react-cra
+electronVersion: 29.4.6
