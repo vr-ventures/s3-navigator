@@ -43,7 +43,8 @@
           "target": "dmg",
           "arch": ["x64", "arm64"]
         }
-      ]
+      ],
+      "icon": "assets/icon.png"
     },
     "dmg": {
       "title": "S3 Navigator",
