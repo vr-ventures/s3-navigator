@@ -39,34 +39,8 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
     return new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString();
   };
 
-  const handleBackNavigation = () => {
-    if (currentPrefix) {
-      // Navigate to parent folder
-      const parentPrefix = currentPrefix.substring(0, currentPrefix.lastIndexOf('/', currentPrefix.length - 2) + 1);
-      onNavigate(parentPrefix);
-    }
-  };
-
   return (
     <div className="folder-browser">
-      <div className="folder-header">
-        <div className="breadcrumb">
-          <button onClick={() => onNavigate('')} className="breadcrumb-item">
-            🏠 Root
-          </button>
-          {currentPrefix && (
-            <>
-              <span className="breadcrumb-separator">/</span>
-              <button onClick={handleBackNavigation} className="breadcrumb-item">
-                ⬅️ Back
-              </button>
-              <span className="breadcrumb-separator">/</span>
-              <span className="current-path">{currentPrefix}</span>
-            </>
-          )}
-        </div>
-      </div>
-
       <div className="folder-content">
         <table className="file-table">
           <thead>

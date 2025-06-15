@@ -33,6 +33,9 @@
       "node_modules/**/*",
       "package.json"
     ],
+    "extraMetadata": {
+      "main": "dist/main.js"
+    },
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [

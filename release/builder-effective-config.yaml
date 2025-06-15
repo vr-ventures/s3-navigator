@@ -9,7 +9,7 @@ files:
       - node_modules/**/*
       - package.json
 extraMetadata:
-  main: build/electron.js
+  main: dist/main.js
 appId: com.s3navigator.app
 productName: S3 Navigator
 mac:
