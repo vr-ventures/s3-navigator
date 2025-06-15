@@ -415,6 +415,12 @@ body {
   font-size: 0.9rem;
 }
 
+.fallback-note {
+  font-style: italic;
+  color: #666;
+  font-size: 0.85rem;
+}
+
 .json-search-examples {
   margin-top: 1rem;
 }

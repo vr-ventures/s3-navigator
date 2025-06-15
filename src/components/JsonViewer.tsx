@@ -8,7 +8,7 @@ interface JsonViewerProps {
 
 export const JsonViewer: React.FC<JsonViewerProps> = ({ data }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchMode, setSearchMode] = useState<'text' | 'jsonpath'>('text');
+  const [searchMode, setSearchMode] = useState<'text' | 'jsonpath'>('jsonpath');
   const [jsonPathError, setJsonPathError] = useState<string | null>(null);
 
   // Function to detect if search term looks like JSONPath
@@ -113,17 +113,28 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({ data }) => {
     
     if (!searchTerm) return safeData;
 
-    // Auto-detect search mode based on query pattern
-    const detectedMode = isJsonPathQuery(searchTerm) ? 'jsonpath' : 'text';
-    
-    if (detectedMode === 'jsonpath') {
-      const result = executeJsonPath(safeData, searchTerm);
-      return result ?? {};
-    } else {
+    // Default to JSONPath mode, but allow explicit text mode
+    // If user explicitly selected text mode, use text search
+    // Otherwise, try JSONPath first, fallback to text if it fails
+    if (searchMode === 'text') {
       const result = filterJsonData(safeData, searchTerm);
       return result ?? {};
+    } else {
+      // Try JSONPath first (default behavior)
+      try {
+        const result = executeJsonPath(safeData, searchTerm);
+        return result ?? {};
+      } catch (error) {
+        // If JSONPath fails and the query doesn't look like JSONPath, fallback to text search
+        if (!isJsonPathQuery(searchTerm)) {
+          const result = filterJsonData(safeData, searchTerm);
+          return result ?? {};
+        }
+        // If it looks like JSONPath but failed, keep the error and return original data
+        return safeData;
+      }
     }
-  }, [data, searchTerm]);
+  }, [data, searchTerm, searchMode]);
 
   const clearSearch = () => {
     setSearchTerm('');
@@ -137,22 +148,20 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({ data }) => {
   };
 
   const getPlaceholderText = () => {
-    if (isJsonPathQuery(searchTerm)) {
-      return "JSONPath query (e.g., $.users[*].name, $..email)";
-    }
     return searchMode === 'jsonpath' 
-      ? "JSONPath query (e.g., $.users[*].name, $..email)" 
+      ? "JSONPath query (e.g., $.users[*].name, $..email, or simple text)" 
       : "Search keys or values...";
   };
 
   const getSearchExamples = () => {
-    if (searchMode === 'jsonpath' || isJsonPathQuery(searchTerm)) {
+    if (searchMode === 'jsonpath') {
       return [
         "$.users[*].name - Get all user names",
         "$..email - Find all email fields",
         "$.data[?(@.status=='active')] - Filter by condition",
         "$.items[0:3] - Get first 3 items",
-        "$.*[?(@.price > 100)] - Items with price > 100"
+        "$.*[?(@.price > 100)] - Items with price > 100",
+        "name - Simple text search (fallback)"
       ];
     }
     return [
@@ -225,13 +234,14 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({ data }) => {
 
         {searchTerm && !jsonPathError && (
           <div className="json-search-info">
-            {isJsonPathQuery(searchTerm) ? (
+            {searchMode === 'jsonpath' ? (
               <>
                 <strong>JSONPath Query:</strong> <code>{searchTerm}</code>
+                {!isJsonPathQuery(searchTerm) && <span className="fallback-note"> (using text search fallback)</span>}
               </>
             ) : (
               <>
-                Showing results for: <strong>"{searchTerm}"</strong>
+                <strong>Text Search:</strong> <code>{searchTerm}</code>
               </>
             )}
           </div>
