@@ -104,6 +104,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
       case 'folder': return '📁';
       case 'json': return '🔗';
       case 'markdown': return '📝';
+      case 'html': return '🌐';
       case 'image':
         switch (extension) {
           case 'jpg':

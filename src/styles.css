@@ -1472,3 +1472,237 @@ body {
     min-width: auto;
   }
 }
+
+/* HTML Viewer */
+.html-viewer {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  height: auto;
+}
+
+.html-viewer.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  border-radius: 0;
+  height: 100vh;
+}
+
+.html-controls {
+  background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e1e5e9;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.view-mode-selector {
+  display: inline-flex;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid #e1e5e9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.view-mode-button {
+  background: transparent;
+  color: #6b7280;
+  border: none;
+  padding: 0.65rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  position: relative;
+  z-index: 2;
+  white-space: nowrap;
+  min-width: fit-content;
+}
+
+.view-mode-button:first-child {
+  margin-right: 2px;
+}
+
+.view-mode-button:hover:not(.active) {
+  background: rgba(102, 126, 234, 0.08);
+  color: #667eea;
+  transform: translateY(-0.5px);
+}
+
+.view-mode-button.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow:
+    0 4px 8px rgba(102, 126, 234, 0.25),
+    0 2px 4px rgba(102, 126, 234, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.view-mode-button.active:hover {
+  box-shadow:
+    0 6px 12px rgba(102, 126, 234, 0.3),
+    0 3px 6px rgba(102, 126, 234, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-1.5px);
+}
+
+.html-controls button:not(.view-mode-button) {
+  background: #ffffff;
+  color: #374151;
+  border: 1px solid #e1e5e9;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  white-space: nowrap;
+}
+
+.html-controls button:not(.view-mode-button):hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #111827;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.html-controls button:not(.view-mode-button):active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.html-iframe-container {
+  position: relative;
+  height: 70vh;
+  min-height: 400px;
+}
+
+.html-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+}
+
+.html-viewer.fullscreen .html-iframe-container {
+  height: calc(100vh - 80px);
+  /* Account for controls */
+}
+
+.html-security-notice {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.html-source-container {
+  max-height: 70vh;
+  overflow: auto;
+  background: #f8f9fa;
+}
+
+.html-viewer.fullscreen .html-source-container {
+  max-height: calc(100vh - 80px);
+}
+
+.html-source-code {
+  margin: 0;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border: none;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #333;
+}
+
+.html-source-code code {
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Syntax highlighting for HTML in source view */
+.html-source-code .language-html {
+  color: #333;
+}
+
+/* Add to existing responsive section */
+@media (max-width: 768px) {
+  .html-controls {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .view-mode-selector {
+    order: -1;
+    width: 100%;
+    margin-bottom: 0.75rem;
+    justify-content: center;
+  }
+
+  .view-mode-button {
+    font-size: 0.8rem;
+    padding: 0.55rem 1rem;
+    gap: 0.3rem;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .view-mode-button:first-child {
+    margin-right: 1px;
+  }
+
+  .html-controls button:not(.view-mode-button) {
+    font-size: 0.8rem;
+    padding: 0.55rem 0.8rem;
+    gap: 0.3rem;
+  }
+
+  .html-iframe-container {
+    height: 60vh;
+    min-height: 300px;
+  }
+
+  .html-source-container {
+    max-height: 60vh;
+  }
+
+  .html-source-code {
+    padding: 1rem;
+    font-size: 0.8rem;
+  }
+}

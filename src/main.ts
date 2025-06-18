@@ -43,27 +43,31 @@ app.on('activate', () => {
 });
 
 // Helper function to determine file type
-function getFileType(key: string, contentType?: string): 'json' | 'markdown' | 'image' | 'folder' | 'other' {
+function getFileType(key: string, contentType?: string): 'json' | 'markdown' | 'html' | 'image' | 'folder' | 'other' {
   // If key ends with /, it's a folder
   if (key.endsWith('/')) {
     return 'folder';
   }
-  
+
   const extension = path.extname(key).toLowerCase();
-  
+
   // Check by extension first
   if (['.json'].includes(extension)) {
     return 'json';
   }
-  
+
   if (['.md', '.markdown'].includes(extension)) {
     return 'markdown';
   }
-  
+
+  if (['.html', '.htm'].includes(extension)) {
+    return 'html';
+  }
+
   if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'].includes(extension)) {
     return 'image';
   }
-  
+
   // Check by content type if available
   if (contentType) {
     if (contentType.includes('application/json')) {
@@ -72,11 +76,14 @@ function getFileType(key: string, contentType?: string): 'json' | 'markdown' | '
     if (contentType.includes('text/markdown')) {
       return 'markdown';
     }
+    if (contentType.includes('text/html')) {
+      return 'html';
+    }
     if (contentType.startsWith('image/')) {
       return 'image';
     }
   }
-  
+
   return 'other';
 }
 
@@ -90,7 +97,7 @@ ipcMain.handle('get-s3-object', async (event, { bucket, key }) => {
 
     const response = await s3Client.send(command);
     const fileType = getFileType(key, response.ContentType);
-    
+
     if (fileType === 'image') {
       // For images, return the binary data as base64
       const bodyContents = await response.Body?.transformToByteArray();
@@ -130,6 +137,12 @@ ipcMain.handle('get-s3-object', async (event, { bucket, key }) => {
             data: bodyContents,
             key: key
           };
+        } else if (fileType === 'html') {
+          return {
+            type: 'html',
+            data: bodyContents,
+            key: key
+          };
         } else {
           return {
             type: 'other',
@@ -139,7 +152,7 @@ ipcMain.handle('get-s3-object', async (event, { bucket, key }) => {
         }
       }
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error fetching S3 object:', error);
@@ -157,7 +170,7 @@ ipcMain.handle('list-s3-objects', async (event, { bucket, prefix = '' }) => {
     });
 
     const response = await s3Client.send(command);
-    
+
     const folders = (response.CommonPrefixes || []).map(prefix => ({
       type: 'folder' as const,
       key: prefix.Prefix!,
@@ -165,7 +178,7 @@ ipcMain.handle('list-s3-objects', async (event, { bucket, prefix = '' }) => {
       size: 0,
       lastModified: null
     }));
-    
+
     const files = (response.Contents || []).map(obj => ({
       type: getFileType(obj.Key!, obj.Key?.includes('.') ? undefined : 'application/octet-stream'),
       key: obj.Key!,
@@ -173,7 +186,7 @@ ipcMain.handle('list-s3-objects', async (event, { bucket, prefix = '' }) => {
       size: obj.Size || 0,
       lastModified: obj.LastModified || null
     }));
-    
+
     return {
       folders,
       files,

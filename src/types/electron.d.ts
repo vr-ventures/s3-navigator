@@ -9,7 +9,7 @@ export interface IElectronAPI {
 }
 
 export interface S3ObjectResult {
-  type: 'json' | 'markdown' | 'image' | 'other';
+  type: 'json' | 'markdown' | 'html' | 'image' | 'other';
   data: any;
   key: string;
   contentType?: string;
@@ -23,7 +23,7 @@ export interface S3ListResult {
 }
 
 export interface S3Item {
-  type: 'folder' | 'json' | 'markdown' | 'image' | 'other';
+  type: 'folder' | 'json' | 'markdown' | 'html' | 'image' | 'other';
   key: string;
   name: string;
   size: number;
@@ -36,4 +36,4 @@ declare global {
   }
 }
 
-export {}; 
+export { }; 

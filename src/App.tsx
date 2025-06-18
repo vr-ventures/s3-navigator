@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { JsonViewer } from './components/JsonViewer';
 import { MarkdownViewer } from './components/MarkdownViewer';
+import { HtmlViewer } from './components/HtmlViewer';
 import { ImageViewer } from './components/ImageViewer';
 import { FolderBrowser } from './components/FolderBrowser';
 import { S3FileSelector } from './components/S3FileSelector';
@@ -183,6 +184,22 @@ const App: React.FC = () => {
               </div>
             );
 
+          case 'html':
+            return (
+              <div className="viewer-container">
+                <div className="viewer-header">
+                  <h2>🌐 {fileName}</h2>
+                  <button onClick={handleBackToFolder} className="folder-nav-button">
+                    📁 Browse Folder
+                  </button>
+                </div>
+                <HtmlViewer
+                  content={fileData.data}
+                  fileName={fileName}
+                />
+              </div>
+            );
+
           case 'image':
             return (
               <div className="viewer-container">
@@ -195,6 +212,22 @@ const App: React.FC = () => {
                 <ImageViewer
                   base64Data={fileData.data}
                   contentType={fileData.contentType || 'image/png'}
+                  fileName={fileName}
+                />
+              </div>
+            );
+
+          case 'html':
+            return (
+              <div className="viewer-container">
+                <div className="viewer-header">
+                  <h2>📄 {fileName}</h2>
+                  <button onClick={handleBackToFolder} className="folder-nav-button">
+                    📁 Browse Folder
+                  </button>
+                </div>
+                <HtmlViewer
+                  content={fileData.data}
                   fileName={fileName}
                 />
               </div>
