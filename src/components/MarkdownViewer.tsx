@@ -11,11 +11,6 @@ interface MarkdownViewerProps {
 export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ content, fileName }) => {
   return (
     <div className="markdown-viewer">
-      {fileName && (
-        <div className="markdown-header">
-          <h2>📄 {fileName}</h2>
-        </div>
-      )}
       <div className="markdown-content">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}

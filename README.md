@@ -44,6 +44,27 @@
 - **React + TypeScript**: Modern, type-safe frontend development
 - **Secure Architecture**: Proper IPC communication with context isolation
 
+### 🔖 Bookmarked Buckets Sidebar
+- **Collapsible sidebar** with toggle button
+- **Manual bookmarking** of frequently used buckets
+- **Quick bucket switching** from sidebar
+- **Persistent storage** of bookmarks in localStorage
+- **Responsive design** for mobile and desktop
+
+### How to Use
+1. **Toggle Sidebar**: Click the toggle button (▶/◀) in the top-left corner
+2. **Bookmark Buckets**: Use the star button (☆/⭐) next to bucket names in the breadcrumb
+3. **Quick Access**: Click any bookmarked bucket in the sidebar for instant navigation
+4. **Remove Bookmarks**: Click the ✕ button next to any bookmarked bucket
+5. **Download Files**: Click the 💾 button next to any file to download it locally
+6. **Copy S3 URLs**: Click the 📋 button to copy the S3 URL to clipboard
+
+### 🎨 Enhanced Visual Experience
+- **Smart File Icons**: Contextual icons based on file types and extensions
+- **File Information**: Size, last modified date, and type indicators
+- **Loading Skeletons**: Smooth placeholder animations instead of spinners
+- **Professional Interface**: Clean, modern design with intuitive interactions
+
 ---
 
 ## 🚀 Quick Start

@@ -10,7 +10,7 @@ files:
       - package.json
 extraMetadata:
   main: dist/main.js
-appId: com.s3navigator.app
+appId: com.vrventures.s3navigator
 productName: S3 Navigator
 mac:
   category: public.app-category.developer-tools

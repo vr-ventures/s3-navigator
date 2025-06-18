@@ -35,29 +35,24 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ base64Data, contentTyp
 
   return (
     <div className="image-viewer">
-      {fileName && (
-        <div className="image-header">
-          <h2>🖼️ {fileName}</h2>
-          <div className="image-controls">
-            <button onClick={handleZoomOut} disabled={zoom <= 0.25}>
-              🔍-
-            </button>
-            <span className="zoom-level">{Math.round(zoom * 100)}%</span>
-            <button onClick={handleZoomIn} disabled={zoom >= 3}>
-              🔍+
-            </button>
-            <button onClick={handleReset}>
-              Reset
-            </button>
-            <button onClick={() => setShowFullSize(!showFullSize)}>
-              {showFullSize ? 'Fit to Screen' : 'Full Size'}
-            </button>
-            <button onClick={handleDownload}>
-              💾 Download
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="image-controls">
+        <button onClick={handleZoomOut} disabled={zoom <= 0.25}>
+          🔍-
+        </button>
+        <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+        <button onClick={handleZoomIn} disabled={zoom >= 3}>
+          🔍+
+        </button>
+        <button onClick={handleReset}>
+          Reset
+        </button>
+        <button onClick={() => setShowFullSize(!showFullSize)}>
+          {showFullSize ? 'Fit to Screen' : 'Full Size'}
+        </button>
+        <button onClick={handleDownload}>
+          💾 Download
+        </button>
+      </div>
       <div className="image-container" style={{ overflow: showFullSize ? 'auto' : 'hidden' }}>
         <img
           src={imageUrl}

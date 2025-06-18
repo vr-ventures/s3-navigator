@@ -17,11 +17,19 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
-  "keywords": ["electron", "s3", "aws", "file-browser", "json-viewer", "markdown", "navigator"],
-  "author": "Your Name",
+  "keywords": [
+    "electron",
+    "s3",
+    "aws",
+    "file-browser",
+    "json-viewer",
+    "markdown",
+    "navigator"
+  ],
+  "author": "VR Enterprises",
   "license": "MIT",
   "build": {
-    "appId": "com.s3navigator.app",
+    "appId": "com.vrventures.s3navigator",
     "productName": "S3 Navigator",
     "directories": {
       "output": "release",
@@ -41,7 +49,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "assets/icon.png"

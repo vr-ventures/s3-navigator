@@ -6,6 +6,9 @@ import { FolderBrowser } from './components/FolderBrowser';
 import { S3FileSelector } from './components/S3FileSelector';
 import { Breadcrumb } from './components/Breadcrumb';
 import { Logo } from './components/Logo';
+import { Sidebar } from './components/Sidebar';
+import { LoadingSkeleton } from './components/LoadingSkeleton';
+import { useBookmarkedBuckets } from './hooks/useBookmarkedBuckets';
 import { S3ObjectResult, S3ListResult } from './types/electron';
 
 type ViewMode = 'selector' | 'browser' | 'viewer';
@@ -18,11 +21,14 @@ const App: React.FC = () => {
   const [fileData, setFileData] = useState<S3ObjectResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+
+  const { bookmarkedBuckets, addBookmark, removeBookmark, isBookmarked } = useBookmarkedBuckets();
 
   const handleBucketKeySubmit = async (bucket: string, key: string) => {
     setCurrentBucket(bucket);
     setError(null);
-    
+
     // If key ends with / or is empty, treat as folder
     if (!key || key.endsWith('/')) {
       setCurrentPrefix(key || '');
@@ -93,13 +99,26 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSidebarToggle = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  const handleBookmarkToggle = (bucket: string) => {
+    if (isBookmarked(bucket)) {
+      removeBookmark(bucket);
+    } else {
+      addBookmark(bucket);
+    }
+  };
+
+  const handleSidebarBucketSelect = async (bucket: string) => {
+    await handleBucketKeySubmit(bucket, '');
+    setSidebarOpen(false); // Close sidebar on mobile after selection
+  };
+
   const renderContent = () => {
     if (loading) {
-      return (
-        <div className="loading">
-          <p>🧭 Navigating...</p>
-        </div>
-      );
+      return <LoadingSkeleton type={viewMode === 'viewer' ? 'viewer' : 'folder'} />;
     }
 
     if (error) {
@@ -115,7 +134,7 @@ const App: React.FC = () => {
     switch (viewMode) {
       case 'selector':
         return <S3FileSelector onFileSelect={handleBucketKeySubmit} />;
-      
+
       case 'browser':
         if (!folderData) return null;
         return (
@@ -123,16 +142,17 @@ const App: React.FC = () => {
             folders={folderData.folders}
             files={folderData.files}
             currentPrefix={currentPrefix}
+            currentBucket={currentBucket}
             onNavigate={handleFolderNavigate}
             onFileSelect={handleFileSelect}
           />
         );
-      
+
       case 'viewer':
         if (!fileData) return null;
-        
+
         const fileName = fileData.key.split('/').pop();
-        
+
         switch (fileData.type) {
           case 'json':
             return (
@@ -146,7 +166,7 @@ const App: React.FC = () => {
                 <JsonViewer data={fileData.data} />
               </div>
             );
-          
+
           case 'markdown':
             return (
               <div className="viewer-container">
@@ -156,13 +176,13 @@ const App: React.FC = () => {
                     📁 Browse Folder
                   </button>
                 </div>
-                <MarkdownViewer 
-                  content={fileData.data} 
-                  fileName={fileName} 
+                <MarkdownViewer
+                  content={fileData.data}
+                  fileName={fileName}
                 />
               </div>
             );
-          
+
           case 'image':
             return (
               <div className="viewer-container">
@@ -179,7 +199,7 @@ const App: React.FC = () => {
                 />
               </div>
             );
-          
+
           default:
             return (
               <div className="viewer-container">
@@ -200,33 +220,50 @@ const App: React.FC = () => {
               </div>
             );
         }
-      
+
       default:
         return null;
     }
   };
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <Logo size={36} showText={true} />
-      </header>
-      
-      {/* Breadcrumb navigation - shown when not in selector mode */}
-      {viewMode !== 'selector' && currentBucket && (
-        <div className="breadcrumb-section">
-          <Breadcrumb
-            bucket={currentBucket}
-            currentPrefix={currentPrefix}
-            onNavigate={handleFolderNavigate}
-            onBackToSelector={handleBackToSelector}
-          />
-        </div>
-      )}
-      
-      <main className="app-main">
-        {renderContent()}
-      </main>
+    <div className={`app ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      <Sidebar
+        isOpen={sidebarOpen}
+        onToggle={handleSidebarToggle}
+        bookmarkedBuckets={bookmarkedBuckets}
+        currentBucket={currentBucket}
+        onBucketSelect={handleSidebarBucketSelect}
+        onRemoveBookmark={removeBookmark}
+      />
+
+      <div className="app-content">
+        <header className="app-header">
+          <Logo size={36} showText={true} />
+        </header>
+
+        {/* Breadcrumb navigation - shown when not in selector mode */}
+        {viewMode !== 'selector' && currentBucket && (
+          <div className="breadcrumb-section">
+            <Breadcrumb
+              bucket={currentBucket}
+              currentPrefix={currentPrefix}
+              onNavigate={handleFolderNavigate}
+              onBackToSelector={handleBackToSelector}
+              onBookmarkBucket={handleBookmarkToggle}
+              isBookmarked={isBookmarked(currentBucket)}
+            />
+          </div>
+        )}
+
+        <main className="app-main">
+          {renderContent()}
+        </main>
+
+        <footer className="app-footer">
+          <p>Made with ❤️ by <strong>VR Enterprises</strong></p>
+        </footer>
+      </div>
     </div>
   );
 };

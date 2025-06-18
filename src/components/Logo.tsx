@@ -22,7 +22,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 32, showText = true, classNam
           fill="currentColor"
           opacity="0.8"
         />
-        
+
         {/* Folder icon inside cloud */}
         <path
           d="M22 28h16c1.1 0 2 0.9 2 2v8c0 1.1-0.9 2-2 2H22c-1.1 0-2-0.9-2-2v-8c0-1.1 0.9-2 2-2z"
@@ -30,7 +30,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 32, showText = true, classNam
           stroke="currentColor"
           strokeWidth="1"
         />
-        
+
         {/* Navigation compass needle */}
         <circle
           cx="48"
@@ -54,7 +54,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 32, showText = true, classNam
           r="2"
           fill="white"
         />
-        
+
         {/* Connection lines */}
         <path
           d="M36 16h6"
@@ -71,10 +71,10 @@ export const Logo: React.FC<LogoProps> = ({ size = 32, showText = true, classNam
           opacity="0.6"
         />
       </svg>
-      
+
       {showText && (
-        <span className="logo-text" style={{ 
-          fontWeight: 600, 
+        <span className="logo-text" style={{
+          fontWeight: 600,
           fontSize: size > 24 ? '1.2rem' : '1rem',
           color: 'currentColor'
         }}>
