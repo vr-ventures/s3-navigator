@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from './Icon';
 
 interface BreadcrumbProps {
   bucket: string;
@@ -65,7 +66,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
             onClick={() => onBookmarkBucket(bucket)}
             title={isBookmarked ? `Remove ${bucket} from bookmarks` : `Bookmark ${bucket}`}
           >
-            {isBookmarked ? '⭐' : '☆'}
+            {isBookmarked ? <Icon name="star-fill" /> : <Icon name="star" />}
           </button>
         )}
 
@@ -78,7 +79,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
               onClick={() => onNavigate(segment.path)}
               title={`Navigate to: ${segment.path}`}
             >
-              📁 {segment.name}
+              <Icon name="folder" /> {segment.name}
             </button>
           </React.Fragment>
         ))}

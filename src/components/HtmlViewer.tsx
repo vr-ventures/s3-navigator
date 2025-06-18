@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import Icon from './Icon';
 
 interface HtmlViewerProps {
     content: string;
@@ -51,7 +52,7 @@ export const HtmlViewer: React.FC<HtmlViewerProps> = ({ content, fileName }) => 
                         className={`view-mode-button ${viewMode === 'rendered' ? 'active' : ''}`}
                         title="View rendered HTML"
                     >
-                        🌐 Rendered
+                        <Icon name="globe" /> Rendered
                     </button>
                     <button
                         onClick={() => setViewMode('source')}
@@ -70,7 +71,7 @@ export const HtmlViewer: React.FC<HtmlViewerProps> = ({ content, fileName }) => 
                 </button>
 
                 <button onClick={handleDownload} title="Download HTML file">
-                    💾 Download
+                    <Icon name="download" /> Download
                 </button>
             </div>
 
@@ -84,7 +85,7 @@ export const HtmlViewer: React.FC<HtmlViewerProps> = ({ content, fileName }) => 
                     />
                     <div className="html-security-notice">
                         <small>
-                            🔒 Content is sandboxed for security. Some features may be limited.
+                            <Icon name="shield-check" /> Content is sandboxed for security. Some features may be limited.
                         </small>
                     </div>
                 </div>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { S3Item } from '../types/electron';
+import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import Icon from './Icon';
 
 interface FolderBrowserProps {
   folders: S3Item[];
@@ -97,44 +99,45 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const getFileIcon = (type: string, fileName?: string) => {
+  // Helper function to get file type icon
+  const getFileIcon = (type: string, fileName?: string): string => {
     const extension = fileName?.split('.').pop()?.toLowerCase();
 
     switch (type) {
-      case 'folder': return '📁';
-      case 'json': return '🔗';
-      case 'markdown': return '📝';
-      case 'html': return '🌐';
+      case 'folder': return 'folder';
+      case 'json': return 'filetype-json';
+      case 'markdown': return 'markdown';
+      case 'html': return 'filetype-html';
       case 'image':
         switch (extension) {
           case 'jpg':
-          case 'jpeg': return '🖼️';
-          case 'png': return '🖼️';
-          case 'gif': return '🎞️';
-          case 'svg': return '🎨';
-          default: return '🖼️';
+          case 'jpeg': return 'file-image';
+          case 'png': return 'file-image';
+          case 'gif': return 'file-image';
+          case 'svg': return 'file-image';
+          default: return 'file-image';
         }
       case 'text':
         switch (extension) {
-          case 'csv': return '📊';
-          case 'xml': return '📋';
+          case 'csv': return 'filetype-csv';
+          case 'xml': return 'filetype-xml';
           case 'yaml':
-          case 'yml': return '⚙️';
-          case 'log': return '📜';
-          default: return '📄';
+          case 'yml': return 'filetype-yml';
+          case 'log': return 'file-text';
+          default: return 'file-text';
         }
       default:
         switch (extension) {
-          case 'pdf': return '📕';
+          case 'pdf': return 'filetype-pdf';
           case 'zip':
           case 'tar':
-          case 'gz': return '📦';
+          case 'gz': return 'file-zip';
           case 'mp4':
           case 'avi':
-          case 'mov': return '🎬';
+          case 'mov': return 'play-circle';
           case 'mp3':
-          case 'wav': return '🎵';
-          default: return '📄';
+          case 'wav': return 'music-note';
+          default: return 'file-text';
         }
     }
   };
@@ -216,7 +219,9 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
       <div className="folder-navigation-header">
         <div className="jump-container">
           <div className="jump-input-wrapper">
-            <span className="jump-icon">🚀</span>
+            <span className="jump-icon">
+              <Icon name="rocket" />
+            </span>
             <input
               ref={jumpInputRef}
               type="text"
@@ -232,7 +237,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
               className="jump-button"
               disabled={!jumpPath.trim() || isJumping}
             >
-              {isJumping ? '🔄' : '→'}
+              {isJumping ? <Icon name="arrow-clockwise" /> : <Icon name="arrow-right" />}
             </button>
           </div>
 
@@ -248,7 +253,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
                     jumpInputRef.current?.focus();
                   }}
                 >
-                  📁 {suggestion}
+                  <Icon name="folder" /> {suggestion}
                 </button>
               ))}
             </div>
@@ -256,7 +261,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
 
           {jumpError && (
             <div className="jump-error">
-              ⚠️ {jumpError}
+              <Icon name="exclamation-triangle" /> {jumpError}
             </div>
           )}
         </div>
@@ -267,7 +272,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
             onClick={() => setShowLocalSearch(!showLocalSearch)}
             className={`local-search-toggle ${showLocalSearch ? 'active' : ''}`}
           >
-            🔍 Search Current Page ({totalItems} items)
+            <Icon name="search" /> Search Current Page ({totalItems} items)
           </button>
 
           {showLocalSearch && (
@@ -284,7 +289,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
                   onClick={() => setLocalSearchTerm('')}
                   className="local-search-clear"
                 >
-                  ✕
+                  <Icon name="x" />
                 </button>
               )}
             </div>
@@ -307,7 +312,9 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
             {filteredFolders.map((folder) => (
               <tr key={folder.key} className="folder-row" onClick={() => onNavigate(folder.key)}>
                 <td>
-                  <span className="file-icon">{getFileIcon(folder.type, folder.name)}</span>
+                  <span className="file-icon">
+                    <Icon name={getFileIcon(folder.type, folder.name)} />
+                  </span>
                   <span className="file-name">{folder.name}</span>
                 </td>
                 <td>Folder</td>
@@ -319,7 +326,9 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
             {filteredFiles.map((file) => (
               <tr key={file.key} className="file-row" onClick={() => onFileSelect(file.key)}>
                 <td>
-                  <span className="file-icon">{getFileIcon(file.type, file.name)}</span>
+                  <span className="file-icon">
+                    <Icon name={getFileIcon(file.type, file.name)} />
+                  </span>
                   <span className="file-name">{file.name}</span>
                 </td>
                 <td>{file.type.charAt(0).toUpperCase() + file.type.slice(1)}</td>
@@ -332,14 +341,14 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
                       onClick={(e) => handleDownload(file.key, file.name, e)}
                       title={`Download ${file.name}`}
                     >
-                      💾
+                      <Icon name="download" />
                     </button>
                     <button
                       className="copy-url-button"
                       onClick={(e) => handleCopyS3Url(file.key, e)}
                       title={`Copy S3 URL for ${file.name}`}
                     >
-                      📋
+                      <Icon name="clipboard" />
                     </button>
                   </div>
                 </td>
@@ -351,7 +360,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
         {/* No results for local search */}
         {showLocalSearch && localSearchTerm && filteredFolders.length === 0 && filteredFiles.length === 0 && (
           <div className="no-search-results">
-            <p>🔍 No items found for "{localSearchTerm}" on this page</p>
+            <p><Icon name="search" /> No items found for "{localSearchTerm}" on this page</p>
             <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
               Try using "Jump to Folder" above to navigate directly to a specific path
             </p>
@@ -361,14 +370,14 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
         {/* Empty folder message */}
         {!showLocalSearch && folders.length === 0 && files.length === 0 && (
           <div className="empty-folder">
-            <p>📂 This folder is empty</p>
+            <p><Icon name="folder" /> This folder is empty</p>
           </div>
         )}
 
         {/* Large folder notice */}
         {totalItems >= 1000 && (
           <div className="large-folder-notice">
-            <p>📊 Showing first {totalItems} items. Use "Jump to Folder" above to navigate directly to specific paths.</p>
+            <p><Icon name="bar-chart" /> Showing first {totalItems} items. Use "Jump to Folder" above to navigate directly to specific paths.</p>
           </div>
         )}
       </div>

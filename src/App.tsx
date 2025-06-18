@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Icon from './components/Icon';
 import { JsonViewer } from './components/JsonViewer';
 import { MarkdownViewer } from './components/MarkdownViewer';
 import { HtmlViewer } from './components/HtmlViewer';
@@ -127,7 +128,9 @@ const App: React.FC = () => {
         <div className="error-message">
           <h3>Navigation Error</h3>
           <p>{error}</p>
-          <button onClick={handleBackToSelector}>🏠 Back to Navigator</button>
+          <button onClick={handleBackToSelector}>
+            <Icon name="house" /> Back to Navigator
+          </button>
         </div>
       );
     }
@@ -159,9 +162,9 @@ const App: React.FC = () => {
             return (
               <div className="viewer-container">
                 <div className="viewer-header">
-                  <h2>📄 {fileName}</h2>
+                  <h2><Icon name="filetype-json" /> {fileName}</h2>
                   <button onClick={handleBackToFolder} className="folder-nav-button">
-                    📁 Browse Folder
+                    <Icon name="folder" /> Browse Folder
                   </button>
                 </div>
                 <JsonViewer data={fileData.data} />
@@ -172,9 +175,9 @@ const App: React.FC = () => {
             return (
               <div className="viewer-container">
                 <div className="viewer-header">
-                  <h2>📝 {fileName}</h2>
+                  <h2><Icon name="markdown" /> {fileName}</h2>
                   <button onClick={handleBackToFolder} className="folder-nav-button">
-                    📁 Browse Folder
+                    <Icon name="folder" /> Browse Folder
                   </button>
                 </div>
                 <MarkdownViewer
@@ -188,9 +191,9 @@ const App: React.FC = () => {
             return (
               <div className="viewer-container">
                 <div className="viewer-header">
-                  <h2>🌐 {fileName}</h2>
+                  <h2><Icon name="filetype-html" /> {fileName}</h2>
                   <button onClick={handleBackToFolder} className="folder-nav-button">
-                    📁 Browse Folder
+                    <Icon name="folder" /> Browse Folder
                   </button>
                 </div>
                 <HtmlViewer
@@ -204,9 +207,9 @@ const App: React.FC = () => {
             return (
               <div className="viewer-container">
                 <div className="viewer-header">
-                  <h2>🖼️ {fileName}</h2>
+                  <h2><Icon name="file-image" /> {fileName}</h2>
                   <button onClick={handleBackToFolder} className="folder-nav-button">
-                    📁 Browse Folder
+                    <Icon name="folder" /> Browse Folder
                   </button>
                 </div>
                 <ImageViewer
@@ -221,9 +224,9 @@ const App: React.FC = () => {
             return (
               <div className="viewer-container">
                 <div className="viewer-header">
-                  <h2>📄 {fileName}</h2>
+                  <h2><Icon name="filetype-html" /> {fileName}</h2>
                   <button onClick={handleBackToFolder} className="folder-nav-button">
-                    📁 Browse Folder
+                    <Icon name="folder" /> Browse Folder
                   </button>
                 </div>
                 <HtmlViewer
@@ -237,9 +240,9 @@ const App: React.FC = () => {
             return (
               <div className="viewer-container">
                 <div className="viewer-header">
-                  <h2>📄 {fileName}</h2>
+                  <h2><Icon name="file-text" /> {fileName}</h2>
                   <button onClick={handleBackToFolder} className="folder-nav-button">
-                    📁 Browse Folder
+                    <Icon name="folder" /> Browse Folder
                   </button>
                 </div>
                 <div className="text-viewer">
@@ -260,7 +263,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`app ${sidebarOpen ? 'sidebar-open' : ''}`}>
+    <div className={`app ${sidebarOpen ? 'sidebar-expanded' : ''}`}>
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={handleSidebarToggle}
@@ -271,10 +274,6 @@ const App: React.FC = () => {
       />
 
       <div className="app-content">
-        <header className="app-header">
-          <Logo size={36} showText={true} />
-        </header>
-
         {/* Breadcrumb navigation - shown when not in selector mode */}
         {viewMode !== 'selector' && currentBucket && (
           <div className="breadcrumb-section">
@@ -294,7 +293,7 @@ const App: React.FC = () => {
         </main>
 
         <footer className="app-footer">
-          <p>Made with ❤️ by <strong>VR Enterprises</strong></p>
+          <p>Made with <Icon name="heart-fill" /> by <strong>VR Enterprises</strong></p>
         </footer>
       </div>
     </div>

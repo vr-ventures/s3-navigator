@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Icon from './Icon';
 
 interface ImageViewerProps {
   base64Data: string;
@@ -37,11 +38,11 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ base64Data, contentTyp
     <div className="image-viewer">
       <div className="image-controls">
         <button onClick={handleZoomOut} disabled={zoom <= 0.25}>
-          🔍-
+          <Icon name="zoom-out" />
         </button>
         <span className="zoom-level">{Math.round(zoom * 100)}%</span>
         <button onClick={handleZoomIn} disabled={zoom >= 3}>
-          🔍+
+          <Icon name="zoom-in" />
         </button>
         <button onClick={handleReset}>
           Reset
@@ -50,7 +51,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({ base64Data, contentTyp
           {showFullSize ? 'Fit to Screen' : 'Full Size'}
         </button>
         <button onClick={handleDownload}>
-          💾 Download
+          <Icon name="download" /> Download
         </button>
       </div>
       <div className="image-container" style={{ overflow: showFullSize ? 'auto' : 'hidden' }}>

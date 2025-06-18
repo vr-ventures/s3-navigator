@@ -100,12 +100,13 @@
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/credential-providers": "^3.0.0",
     "@uiw/react-json-view": "^2.0.0-alpha.32",
+    "bootstrap-icons": "^1.13.1",
     "jsonpath-plus": "^10.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.0.0",
-    "remark-gfm": "^4.0.0",
-    "rehype-highlight": "^7.0.0"
+    "rehype-highlight": "^7.0.0",
+    "remark-gfm": "^4.0.0"
   },
   "browserslist": {
     "production": [
