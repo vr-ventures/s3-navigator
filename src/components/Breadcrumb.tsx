@@ -7,7 +7,8 @@ interface BreadcrumbProps {
   onNavigate: (prefix: string) => void;
   onBackToSelector: () => void;
   onBookmarkBucket?: (bucket: string) => void;
-  isBookmarked?: boolean;
+  onBookmarkFolder?: (bucket: string, prefix: string) => void;
+  isBookmarked?: (bucket: string, prefix?: string) => boolean;
 }
 
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({
@@ -16,7 +17,8 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
   onNavigate,
   onBackToSelector,
   onBookmarkBucket,
-  isBookmarked = false
+  onBookmarkFolder,
+  isBookmarked
 }) => {
   // Split the path into segments
   const getPathSegments = () => {
@@ -38,6 +40,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
   };
 
   const pathSegments = getPathSegments();
+  const isBucketBookmarked = isBookmarked ? isBookmarked(bucket, '') : false;
 
   return (
     <div className="breadcrumb-container">
@@ -45,7 +48,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
         <button
           className="breadcrumb-button home-button"
           onClick={onBackToSelector}
-          title="Back to S3 Navigator"
+          title="Back to CloudBrowse"
         >
           🏠
         </button>
@@ -62,27 +65,41 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
 
         {onBookmarkBucket && (
           <button
-            className={`breadcrumb-button bookmark-button ${isBookmarked ? 'bookmarked' : ''}`}
+            className={`breadcrumb-button bookmark-button ${isBucketBookmarked ? 'bookmarked' : ''}`}
             onClick={() => onBookmarkBucket(bucket)}
-            title={isBookmarked ? `Remove ${bucket} from bookmarks` : `Bookmark ${bucket}`}
+            title={isBucketBookmarked ? `Remove ${bucket} from bookmarks` : `Bookmark ${bucket}`}
           >
-            {isBookmarked ? <Icon name="star-fill" /> : <Icon name="star" />}
+            {isBucketBookmarked ? <Icon name="star-fill" /> : <Icon name="star" />}
           </button>
         )}
 
-        {pathSegments.map((segment, index) => (
-          <React.Fragment key={segment.path}>
-            <span className="breadcrumb-separator">/</span>
-            <button
-              className={`breadcrumb-button folder-button ${index === pathSegments.length - 1 ? 'current' : ''
-                }`}
-              onClick={() => onNavigate(segment.path)}
-              title={`Navigate to: ${segment.path}`}
-            >
-              <Icon name="folder" /> {segment.name}
-            </button>
-          </React.Fragment>
-        ))}
+        {pathSegments.map((segment, index) => {
+          const isLast = index === pathSegments.length - 1;
+          const isFolderBookmarked = isBookmarked ? isBookmarked(bucket, segment.path) : false;
+
+          return (
+            <React.Fragment key={segment.path}>
+              <span className="breadcrumb-separator">/</span>
+              <button
+                className={`breadcrumb-button folder-button ${isLast ? 'current' : ''}`}
+                onClick={() => onNavigate(segment.path)}
+                title={`Navigate to: ${segment.path}`}
+              >
+                <Icon name="folder" /> {segment.name}
+              </button>
+
+              {isLast && onBookmarkFolder && (
+                <button
+                  className={`breadcrumb-button bookmark-button ${isFolderBookmarked ? 'bookmarked' : ''}`}
+                  onClick={() => onBookmarkFolder(bucket, segment.path)}
+                  title={isFolderBookmarked ? `Remove ${segment.name} from bookmarks` : `Bookmark ${segment.name}`}
+                >
+                  {isFolderBookmarked ? <Icon name="star-fill" /> : <Icon name="star" />}
+                </button>
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
     </div>
   );

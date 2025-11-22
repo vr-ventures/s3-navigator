@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('electron', {
     },
     listObjects: (bucket: string, prefix?: string) => {
       return ipcRenderer.invoke('list-s3-objects', { bucket, prefix });
+    },
+    searchObjects: (bucket: string, searchTerm: string, currentPrefix?: string) => {
+      return ipcRenderer.invoke('search-s3-objects', { bucket, searchTerm, currentPrefix });
     }
   }
 }); 

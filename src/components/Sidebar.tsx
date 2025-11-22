@@ -1,243 +1,234 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Icon from './Icon';
-
-interface BookmarkedBucket {
-    name: string;
-    addedAt: string;
-}
-
-interface MenuSection {
-    id: string;
-    title: string;
-    icon: string;
-    items?: MenuItem[];
-    action?: () => void;
-}
-
-interface MenuItem {
-    id: string;
-    name: string;
-    icon?: string;
-    action: () => void;
-}
+import { BookmarkedItem } from '../hooks/useBookmarkedBuckets';
 
 interface SidebarProps {
     isOpen: boolean;
     onToggle: () => void;
-    bookmarkedBuckets: BookmarkedBucket[];
+    bookmarkedItems: BookmarkedItem[];
     currentBucket: string;
-    onBucketSelect: (bucket: string) => void;
-    onRemoveBookmark: (bucket: string) => void;
+    currentPrefix: string;
+    onBucketSelect: (bucket: string, prefix: string) => Promise<void>;
+    onRemoveBookmark: (bucket: string, prefix?: string) => void;
+    width?: number;
+    onWidthChange?: (width: number) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
     isOpen,
     onToggle,
-    bookmarkedBuckets,
+    bookmarkedItems,
     currentBucket,
+    currentPrefix,
     onBucketSelect,
     onRemoveBookmark,
+    width = 250,
+    onWidthChange
 }) => {
-    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['bookmarks']));
+    const [expandedBuckets, setExpandedBuckets] = useState<Record<string, boolean>>({});
+    const [isResizing, setIsResizing] = useState(false);
+    const sidebarRef = useRef<HTMLDivElement>(null);
 
-    // Helper function to get bucket initial or icon
-    const getBucketInitial = (bucketName: string) => {
-        return bucketName.charAt(0).toUpperCase();
-    };
+    // Group bookmarks by bucket
+    const groupedBookmarks = React.useMemo(() => {
+        const groups: Record<string, BookmarkedItem[]> = {};
 
-    const toggleSection = (sectionId: string) => {
-        // If in compact mode, expand sidebar and show this section
-        if (!isOpen) {
-            onToggle(); // Expand the sidebar
-            // Set this section as expanded
-            const newExpanded = new Set(expandedSections);
-            newExpanded.add(sectionId);
-            setExpandedSections(newExpanded);
-            return;
-        }
-
-        // Normal toggle behavior when sidebar is already expanded
-        const newExpanded = new Set(expandedSections);
-        if (newExpanded.has(sectionId)) {
-            newExpanded.delete(sectionId);
-        } else {
-            newExpanded.add(sectionId);
-        }
-        setExpandedSections(newExpanded);
-    };
-
-    // Define menu sections - simplified to only bookmarks and settings
-    const menuSections: MenuSection[] = [
-        {
-            id: 'bookmarks',
-            title: 'Bookmarked Buckets',
-            icon: 'bookmarks',
-            items: bookmarkedBuckets.map(bucket => ({
-                id: bucket.name,
-                name: bucket.name,
-                icon: getBucketInitial(bucket.name),
-                action: () => onBucketSelect(bucket.name)
-            }))
-        },
-        {
-            id: 'settings',
-            title: 'Settings',
-            icon: 'gear',
-            action: () => {
-                // Disabled for now
-                console.log('Settings - Coming soon');
+        bookmarkedItems.forEach(item => {
+            if (!groups[item.bucket]) {
+                groups[item.bucket] = [];
             }
+            if (item.prefix) {
+                groups[item.bucket].push(item);
+            }
+        });
+
+        return groups;
+    }, [bookmarkedItems]);
+
+    // Initialize expanded state for buckets with current selection or bookmarks
+    useEffect(() => {
+        const newExpanded = { ...expandedBuckets };
+        let hasChanges = false;
+
+        // Expand current bucket
+        if (currentBucket && !expandedBuckets[currentBucket]) {
+            newExpanded[currentBucket] = true;
+            hasChanges = true;
         }
-    ];
 
-    const renderSectionHeader = (section: MenuSection) => {
-        const isExpanded = expandedSections.has(section.id);
-        const hasItems = section.items && section.items.length > 0;
+        if (hasChanges) {
+            setExpandedBuckets(newExpanded);
+        }
+    }, [currentBucket]);
 
-        return (
-            <div
-                className={`section-header ${hasItems ? 'expandable' : 'clickable'}`}
-                onClick={() => {
-                    if (hasItems) {
-                        toggleSection(section.id);
-                    } else if (section.action) {
-                        // For action items in compact mode, expand sidebar first then execute action
-                        if (!isOpen) {
-                            onToggle();
-                            // Delay action execution to allow sidebar to expand
-                            setTimeout(() => {
-                                if (section.id === 'settings') {
-                                    // Settings is disabled for now
-                                    return;
-                                }
-                                section.action!();
-                            }, 100);
-                        } else {
-                            if (section.id === 'settings') {
-                                // Settings is disabled for now
-                                return;
-                            }
-                            section.action();
-                        }
-                    }
-                }}
-            >
-                <div className="section-icon">
-                    <Icon name={section.icon} />
-                </div>
-                {isOpen && (
-                    <>
-                        <span className="section-title">
-                            {section.title}
-                            {section.id === 'settings' && <span className="disabled-badge">Coming Soon</span>}
-                        </span>
-                        {hasItems && (
-                            <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>
-                                <Icon name="chevron-right" />
-                            </span>
-                        )}
-                    </>
-                )}
-            </div>
-        );
+    const toggleBucketExpand = (bucket: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedBuckets(prev => ({
+            ...prev,
+            [bucket]: !prev[bucket]
+        }));
     };
 
-    const renderSectionItems = (section: MenuSection) => {
-        if (!section.items || !isOpen || !expandedSections.has(section.id)) {
-            return null;
-        }
+    // Resizing logic
+    const startResizing = useCallback((mouseDownEvent: React.MouseEvent) => {
+        mouseDownEvent.preventDefault();
+        setIsResizing(true);
+    }, []);
 
-        if (section.id === 'bookmarks') {
-            // Special rendering for bookmarks with remove functionality
-            return (
-                <div className="section-items">
-                    {section.items.length === 0 ? (
-                        <div className="empty-section">
-                            <small>No bookmarked buckets yet</small>
-                        </div>
-                    ) : (
-                        section.items.map((item) => (
-                            <div
-                                key={item.id}
-                                className={`section-item ${currentBucket === item.id ? 'active' : ''}`}
-                            >
-                                <button
-                                    className="item-button"
-                                    onClick={item.action}
-                                    title={item.name}
-                                >
-                                    <span className="item-icon">{item.icon}</span>
-                                    <span className="item-name">{item.name}</span>
-                                </button>
-                                <button
-                                    className="remove-item"
-                                    onClick={() => onRemoveBookmark(item.id)}
-                                    title={`Remove ${item.name} from bookmarks`}
-                                >
-                                    <Icon name="x" />
-                                </button>
-                            </div>
-                        ))
-                    )}
-                </div>
-            );
-        }
+    const stopResizing = useCallback(() => {
+        setIsResizing(false);
+    }, []);
 
-        // Default rendering for other sections
-        return (
-            <div className="section-items">
-                {section.items.length === 0 ? (
-                    <div className="empty-section">
-                        <small>No items yet</small>
-                    </div>
-                ) : (
-                    section.items.map((item) => (
-                        <div key={item.id} className="section-item">
-                            <button
-                                className="item-button"
-                                onClick={item.action}
-                                title={item.name}
-                            >
-                                {item.icon && <span className="item-icon">{item.icon}</span>}
-                                <span className="item-name">{item.name}</span>
-                            </button>
-                        </div>
-                    ))
-                )}
-            </div>
-        );
-    };
+    const resize = useCallback(
+        (mouseMoveEvent: MouseEvent) => {
+            if (isResizing && onWidthChange) {
+                const newWidth = mouseMoveEvent.clientX;
+                if (newWidth > 150 && newWidth < 600) { // Min and max width constraints
+                    onWidthChange(newWidth);
+                }
+            }
+        },
+        [isResizing, onWidthChange]
+    );
+
+    useEffect(() => {
+        window.addEventListener("mousemove", resize);
+        window.addEventListener("mouseup", stopResizing);
+        return () => {
+            window.removeEventListener("mousemove", resize);
+            window.removeEventListener("mouseup", stopResizing);
+        };
+    }, [resize, stopResizing]);
+
 
     return (
-        <div className={`sidebar ${isOpen ? 'expanded' : 'compact'}`}>
-            {/* Sidebar Header */}
-            <div className="sidebar-header">
-                <button
-                    className="sidebar-toggle"
-                    onClick={onToggle}
-                    title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-                >
-                    {isOpen ? (
-                        <span className="toggle-icon">
-                            <Icon name="chevron-left" />
-                        </span>
-                    ) : (
-                        <span className="toggle-icon">
-                            <Icon name="layout-sidebar" />
-                        </span>
-                    )}
-                </button>
-            </div>
+        <>
+            {/* Overlay for mobile - only show when open and screen is small */}
+            <div
+                className={`sidebar-overlay ${isOpen ? 'visible' : ''}`}
+                onClick={onToggle}
+            />
 
-            {/* Menu Sections */}
-            <div className="sidebar-content">
-                {menuSections.map((section) => (
-                    <div key={section.id} className="menu-section">
-                        {renderSectionHeader(section)}
-                        {renderSectionItems(section)}
+            <div
+                ref={sidebarRef}
+                className={`sidebar ${isOpen ? 'expanded' : 'compact'} ${isResizing ? 'resizing' : ''}`}
+                style={isOpen ? { width: `${width}px` } : {}}
+            >
+                <div className="sidebar-header">
+                    <button className="sidebar-toggle" onClick={onToggle}>
+                        <span className="toggle-icon"><Icon name="list" /></span>
+                        <span className="toggle-text">S3 Navigator</span>
+                    </button>
+                </div>
+
+                <div className="sidebar-content">
+                    {/* Bookmarked Buckets Section */}
+                    <div className="menu-section">
+                        <div className="section-header">
+                            <span className="section-icon"><Icon name="bookmark" /></span>
+                            <span className="section-title">Bookmarked Buckets</span>
+                            <span className="expand-icon expanded"><Icon name="chevron-right" /></span>
+                        </div>
+
+                        <div className="section-items">
+                            {Object.keys(groupedBookmarks).length === 0 ? (
+                                <div className="empty-section">
+                                    <small>No bookmarks yet</small>
+                                </div>
+                            ) : (
+                                Object.entries(groupedBookmarks).map(([bucket, folderBookmarks]) => {
+                                    const isExpanded = expandedBuckets[bucket];
+                                    const isActive = currentBucket === bucket && !currentPrefix;
+
+                                    return (
+                                        <div key={bucket} className="bucket-group">
+                                            <div className={`section-item ${isActive ? 'active' : ''}`}>
+                                                {folderBookmarks.length > 0 && (
+                                                    <button
+                                                        className={`expand-bucket ${isExpanded ? 'expanded' : ''}`}
+                                                        onClick={(e) => toggleBucketExpand(bucket, e)}
+                                                    >
+                                                        <Icon name="chevron-right" />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    className="item-button"
+                                                    onClick={() => onBucketSelect(bucket, '')}
+                                                    title={bucket}
+                                                    style={{ paddingLeft: folderBookmarks.length > 0 ? '0' : '0.5rem' }}
+                                                >
+                                                    <span className="item-icon"><Icon name="hdd-stack" /></span>
+                                                    <span className="item-name">{bucket}</span>
+                                                </button>
+                                                <button
+                                                    className="remove-item"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onRemoveBookmark(bucket, '');
+                                                    }}
+                                                    title={`Remove ${bucket} from bookmarks`}
+                                                >
+                                                    <Icon name="x" />
+                                                </button>
+                                            </div>
+
+                                            {/* Folder Bookmarks */}
+                                            {isExpanded && folderBookmarks.length > 0 && (
+                                                <div className="folder-bookmarks">
+                                                    {folderBookmarks.map(item => (
+                                                        <div
+                                                            key={`${item.bucket}-${item.prefix}`}
+                                                            className={`section-item folder-item ${currentBucket === item.bucket && currentPrefix === item.prefix ? 'active' : ''}`}
+                                                        >
+                                                            <button
+                                                                className="item-button"
+                                                                onClick={() => onBucketSelect(item.bucket, item.prefix)}
+                                                                title={item.prefix}
+                                                            >
+                                                                <span className="item-icon"><Icon name="folder" /></span>
+                                                                <span className="item-name">{item.prefix}</span>
+                                                            </button>
+                                                            <button
+                                                                className="remove-item"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    onRemoveBookmark(item.bucket, item.prefix);
+                                                                }}
+                                                                title={`Remove ${item.prefix} from bookmarks`}
+                                                            >
+                                                                <Icon name="x" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
                     </div>
-                ))}
+
+                    {/* Settings Section */}
+                    <div className="menu-section">
+                        <div className="section-header clickable">
+                            <span className="section-icon"><Icon name="gear" /></span>
+                            <span className="section-title">
+                                Settings
+                                <span className="disabled-badge">Coming Soon</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Resize Handle */}
+                {isOpen && (
+                    <div
+                        className="resize-handle"
+                        onMouseDown={startResizing}
+                    />
+                )}
             </div>
-        </div>
+        </>
     );
-}; 
+};

@@ -89,6 +89,7 @@ function getFileType(key: string, contentType?: string): 'json' | 'markdown' | '
 
 // Handle IPC events for S3 operations
 ipcMain.handle('get-s3-object', async (event, { bucket, key }) => {
+  console.log('Main: get-s3-object called', { bucket, key });
   try {
     const command = new GetObjectCommand({
       Bucket: bucket,
@@ -162,6 +163,7 @@ ipcMain.handle('get-s3-object', async (event, { bucket, key }) => {
 
 // Handle listing S3 objects (for folder browsing)
 ipcMain.handle('list-s3-objects', async (event, { bucket, prefix = '' }) => {
+  console.log('Main: list-s3-objects called', { bucket, prefix });
   try {
     const command = new ListObjectsV2Command({
       Bucket: bucket,
@@ -179,13 +181,21 @@ ipcMain.handle('list-s3-objects', async (event, { bucket, prefix = '' }) => {
       lastModified: null
     }));
 
-    const files = (response.Contents || []).map(obj => ({
-      type: getFileType(obj.Key!, obj.Key?.includes('.') ? undefined : 'application/octet-stream'),
-      key: obj.Key!,
-      name: path.basename(obj.Key!),
-      size: obj.Size || 0,
-      lastModified: obj.LastModified || null
-    }));
+    const files = (response.Contents || [])
+      .filter(obj => obj.Key !== prefix) // Filter out the folder itself
+      .map(obj => ({
+        type: getFileType(obj.Key!, obj.Key?.includes('.') ? undefined : 'application/octet-stream'),
+        key: obj.Key!,
+        name: path.basename(obj.Key!),
+        size: obj.Size || 0,
+        lastModified: obj.LastModified || null
+      }))
+      .sort((a, b) => {
+        // Sort by most recent first (descending order)
+        if (!a.lastModified) return 1;
+        if (!b.lastModified) return -1;
+        return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+      });
 
     return {
       folders,
@@ -194,6 +204,73 @@ ipcMain.handle('list-s3-objects', async (event, { bucket, prefix = '' }) => {
     };
   } catch (error) {
     console.error('Error listing S3 objects:', error);
+    throw error;
+  }
+});
+
+// Handle searching S3 objects across the entire bucket
+ipcMain.handle('search-s3-objects', async (event, { bucket, searchTerm, currentPrefix = '' }) => {
+  console.log('Main: search-s3-objects called', { bucket, searchTerm, currentPrefix });
+  try {
+    const allResults: any[] = [];
+    let continuationToken: string | undefined;
+
+    // Search with pagination
+    do {
+      const command = new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: currentPrefix, // Search within current folder and subfolders
+        ContinuationToken: continuationToken,
+        MaxKeys: 1000
+      });
+
+      const response = await s3Client.send(command);
+
+      if (response.Contents) {
+        // Filter results that match the search term (support full path, partial path, and filename)
+        const matchingFiles = response.Contents
+          .filter(obj => {
+            const key = obj.Key || '';
+            const fileName = path.basename(key);
+            const lowerKey = key.toLowerCase();
+            const lowerSearch = searchTerm.toLowerCase();
+
+            // Match full path, partial path, or filename
+            return lowerKey.includes(lowerSearch) || fileName.toLowerCase().includes(lowerSearch);
+          })
+          .map(obj => ({
+            type: getFileType(obj.Key!, obj.Key?.includes('.') ? undefined : 'application/octet-stream'),
+            key: obj.Key!,
+            name: path.basename(obj.Key!),
+            size: obj.Size || 0,
+            lastModified: obj.LastModified || null,
+            fullPath: obj.Key! // Include full path for display
+          }));
+
+        allResults.push(...matchingFiles);
+      }
+
+      continuationToken = response.NextContinuationToken;
+
+      // Limit to prevent excessive searching (max 5000 items checked)
+      if (allResults.length >= 100 || !continuationToken) {
+        break;
+      }
+    } while (continuationToken);
+
+    // Sort by most recent first
+    allResults.sort((a, b) => {
+      if (!a.lastModified) return 1;
+      if (!b.lastModified) return -1;
+      return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+    });
+
+    return {
+      results: allResults.slice(0, 100), // Return max 100 results
+      totalFound: allResults.length
+    };
+  } catch (error) {
+    console.error('Error searching S3 objects:', error);
     throw error;
   }
 }); 

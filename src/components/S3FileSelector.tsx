@@ -11,15 +11,18 @@ export const S3FileSelector: React.FC<S3FileSelectorProps> = ({ onFileSelect }) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('S3FileSelector submitted', { bucket, key });
     if (bucket) {
       onFileSelect(bucket, key); // key can be empty for root folder browsing
+    } else {
+      console.warn('Bucket is empty');
     }
   };
 
   return (
     <div className="s3-file-selector">
       <div className="selector-header">
-        <h2><Icon name="compass" /> Welcome to S3 Navigator</h2>
+        <h2><Icon name="compass" /> Welcome to CloudBrowse</h2>
         <p>Navigate and explore your S3 buckets with ease. Browse folders, view files, and search through your cloud storage.</p>
       </div>
 

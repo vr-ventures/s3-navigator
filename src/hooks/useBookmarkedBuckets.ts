@@ -1,63 +1,80 @@
 import { useState, useEffect } from 'react';
 
-interface BookmarkedBucket {
-    name: string;
+export interface BookmarkedItem {
+    bucket: string;
+    prefix: string; // Empty string for bucket root, otherwise folder path ending with /
     addedAt: string;
 }
 
 const STORAGE_KEY = 's3-navigator-bookmarked-buckets';
 
 export const useBookmarkedBuckets = () => {
-    const [bookmarkedBuckets, setBookmarkedBuckets] = useState<BookmarkedBucket[]>([]);
+    const [bookmarks, setBookmarks] = useState<BookmarkedItem[]>([]);
 
     // Load bookmarks from localStorage on mount
     useEffect(() => {
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
-                const buckets = JSON.parse(stored);
-                setBookmarkedBuckets(buckets);
+                const items = JSON.parse(stored);
+                // Migrate old format if needed
+                const migratedItems = items.map((item: any) => {
+                    if (item.name) {
+                        return {
+                            bucket: item.name,
+                            prefix: '',
+                            addedAt: item.addedAt
+                        };
+                    }
+                    return item;
+                });
+                setBookmarks(migratedItems);
             }
         } catch (error) {
-            console.error('Failed to load bookmarked buckets:', error);
+            console.error('Failed to load bookmarks:', error);
         }
     }, []);
 
     // Save bookmarks to localStorage whenever they change
     useEffect(() => {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarkedBuckets));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(bookmarks));
         } catch (error) {
-            console.error('Failed to save bookmarked buckets:', error);
+            console.error('Failed to save bookmarks:', error);
         }
-    }, [bookmarkedBuckets]);
+    }, [bookmarks]);
 
-    const addBookmark = (bucketName: string) => {
-        if (!bucketName.trim()) return;
+    const addBookmark = (bucket: string, prefix: string = '') => {
+        if (!bucket.trim()) return;
 
-        // Check if bucket is already bookmarked
-        if (bookmarkedBuckets.some(bucket => bucket.name === bucketName)) {
+        // Check if already bookmarked
+        if (isBookmarked(bucket, prefix)) {
             return; // Already bookmarked
         }
 
-        const newBookmark: BookmarkedBucket = {
-            name: bucketName,
+        const newBookmark: BookmarkedItem = {
+            bucket,
+            prefix,
             addedAt: new Date().toISOString(),
         };
 
-        setBookmarkedBuckets(prev => [newBookmark, ...prev]);
+        setBookmarks(prev => [newBookmark, ...prev]);
     };
 
-    const removeBookmark = (bucketName: string) => {
-        setBookmarkedBuckets(prev => prev.filter(bucket => bucket.name !== bucketName));
+    const removeBookmark = (bucket: string, prefix: string = '') => {
+        setBookmarks(prev => prev.filter(item => 
+            !(item.bucket === bucket && item.prefix === prefix)
+        ));
     };
 
-    const isBookmarked = (bucketName: string) => {
-        return bookmarkedBuckets.some(bucket => bucket.name === bucketName);
+    const isBookmarked = (bucket: string, prefix: string = '') => {
+        return bookmarks.some(item => 
+            item.bucket === bucket && item.prefix === prefix
+        );
     };
 
     return {
-        bookmarkedBuckets,
+        bookmarks,
         addBookmark,
         removeBookmark,
         isBookmarked,
