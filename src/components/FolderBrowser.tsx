@@ -13,6 +13,7 @@ interface FolderBrowserProps {
   onBookmarkFolder?: (bucket: string, prefix: string) => void;
   isBookmarked?: (bucket: string, prefix?: string) => boolean;
   onOpenInNewWindow?: (key: string) => void;
+  onOpenInNewTab?: (key: string) => void;
 }
 
 export const FolderBrowser: React.FC<FolderBrowserProps> = ({
@@ -24,15 +25,14 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
   onFileSelect,
   onBookmarkFolder,
   isBookmarked,
-  onOpenInNewWindow
+  onOpenInNewWindow,
+  onOpenInNewTab
 }) => {
   const [jumpPath, setJumpPath] = useState('');
   const [isJumping, setIsJumping] = useState(false);
   const [jumpError, setJumpError] = useState('');
   const [showLocalSearch, setShowLocalSearch] = useState(false);
   const [localSearchTerm, setLocalSearchTerm] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchMessage, setSearchMessage] = useState('');
   const jumpInputRef = useRef<HTMLInputElement>(null);
 
@@ -40,7 +40,6 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
   useEffect(() => {
     const handleSearchOrNavigate = async () => {
       if (!localSearchTerm.trim()) {
-        setSearchResults([]);
         setSearchMessage('');
         return;
       }
@@ -55,43 +54,15 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
         file.key.toLowerCase().includes(localSearchTerm.toLowerCase())
       );
 
-      // If we have local results, show them immediately
+      // If we have local results, just show them (no message needed)
       if (localFolders.length > 0 || localFiles.length > 0) {
-        setSearchResults([]);
         setSearchMessage('');
         return;
       }
 
-      // If no local results and search looks like a path, try to navigate to it
+      // If no local results and search looks like a path, suggest navigation
       if (localSearchTerm.includes('/') || localSearchTerm.includes('_')) {
-        setIsSearching(true);
-        setSearchMessage(`Navigating to: ${localSearchTerm}...`);
-
-        try {
-          // Construct the full path
-          const fullPath = localSearchTerm.startsWith('/')
-            ? localSearchTerm.substring(1)
-            : currentPrefix + localSearchTerm;
-
-          // Try to navigate to this path
-          // The parent component will handle the actual navigation
-          setSearchMessage(`💡 Press Enter or click a result to navigate to: ${fullPath}`);
-
-          // Create a pseudo-result for navigation
-          setSearchResults([{
-            type: fullPath.endsWith('/') ? 'folder' : 'other',
-            key: fullPath,
-            name: fullPath.split('/').filter(Boolean).pop() || fullPath,
-            size: 0,
-            lastModified: null,
-            fullPath: fullPath
-          }]);
-        } catch (error) {
-          console.error('Navigation failed:', error);
-          setSearchMessage('Path not found. Please check the path and try again.');
-        } finally {
-          setIsSearching(false);
-        }
+        setSearchMessage('💡 Press Enter to navigate to this path');
       } else {
         setSearchMessage('No matching files or folders found in current view.');
       }
@@ -100,6 +71,42 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
     const timeoutId = setTimeout(handleSearchOrNavigate, 300); // Debounce 300ms
     return () => clearTimeout(timeoutId);
   }, [localSearchTerm, currentBucket, currentPrefix, folders, files]);
+
+  // Handle Enter key in search input to navigate to path
+  const handleSearchKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && localSearchTerm.trim()) {
+      // Check if there are any filtered results
+      const hasLocalResults = filteredFolders.length > 0 || filteredFiles.length > 0;
+
+      if (!hasLocalResults && (localSearchTerm.includes('/') || localSearchTerm.includes('_'))) {
+        // Treat as navigation path
+        let targetPath = localSearchTerm.trim();
+
+        // If it doesn't end with /, it might be a file, so navigate to its parent folder
+        if (!targetPath.endsWith('/')) {
+          // Check if it looks like a file (has an extension) or folder
+          const lastPart = targetPath.split('/').pop() || '';
+          const hasExtension = lastPart.includes('.');
+
+          if (!hasExtension) {
+            // Likely a folder, add trailing slash
+            targetPath += '/';
+          } else {
+            // It's a file, navigate to parent folder
+            targetPath = targetPath.substring(0, targetPath.lastIndexOf('/') + 1);
+          }
+        }
+
+        // Construct full path
+        const fullPath = targetPath.startsWith('/')
+          ? targetPath.substring(1)
+          : currentPrefix + targetPath;
+
+        onNavigate(fullPath);
+        setLocalSearchTerm(''); // Clear search after navigation
+      }
+    }
+  };
 
   // Handle direct navigation to a folder path
   const handleJumpToFolder = async () => {
@@ -160,13 +167,10 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
     : folders;
 
   const filteredFiles = localSearchTerm
-    ? (searchResults.length > 0
-      ? searchResults // Show server-side search results
-      : files.filter(file =>
+    ? files.filter(file =>
         file.name.toLowerCase().includes(localSearchTerm.toLowerCase()) ||
         file.key.toLowerCase().includes(localSearchTerm.toLowerCase())
       )
-    )
     : files;
 
   // Keyboard shortcuts
@@ -313,12 +317,13 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
 
         {/* Search box */}
         <div className="folder-search-box">
-          {isSearching ? <Icon name="arrow-clockwise" className="spinning" /> : <Icon name="search" />}
+          <Icon name="search" />
           <input
             type="text"
             value={localSearchTerm}
             onChange={(e) => setLocalSearchTerm(e.target.value)}
-            placeholder="Search or enter path (e.g., folder/subfolder/file.json)..."
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Search files and folders..."
             className="folder-search-input"
           />
           {localSearchTerm && (
@@ -395,6 +400,18 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
                 <td>{formatDate(file.lastModified)}</td>
                 <td>
                   <div className="action-buttons">
+                    {onOpenInNewTab && (
+                      <button
+                        className="open-new-tab-button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenInNewTab(file.key);
+                        }}
+                        title={`Open ${file.name} in new tab`}
+                      >
+                        <Icon name="plus-square" />
+                      </button>
+                    )}
                     {onOpenInNewWindow && (
                       <button
                         className="open-new-window-button"

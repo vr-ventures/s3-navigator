@@ -12,6 +12,8 @@ interface SidebarProps {
     onRemoveBookmark: (bucket: string, prefix?: string) => void;
     width?: number;
     onWidthChange?: (width: number) => void;
+    maxTabsPerPane?: number;
+    onMaxTabsChange?: (maxTabs: number) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -23,10 +25,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onBucketSelect,
     onRemoveBookmark,
     width = 250,
-    onWidthChange
+    onWidthChange,
+    maxTabsPerPane = 10,
+    onMaxTabsChange
 }) => {
     const [expandedBuckets, setExpandedBuckets] = useState<Record<string, boolean>>({});
     const [isResizing, setIsResizing] = useState(false);
+    const [settingsExpanded, setSettingsExpanded] = useState(false);
     const sidebarRef = useRef<HTMLDivElement>(null);
 
     // Group bookmarks by bucket
@@ -211,13 +216,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                     {/* Settings Section */}
                     <div className="menu-section">
-                        <div className="section-header clickable">
+                        <div
+                            className="section-header clickable"
+                            onClick={() => setSettingsExpanded(!settingsExpanded)}
+                        >
                             <span className="section-icon"><Icon name="gear" /></span>
-                            <span className="section-title">
-                                Settings
-                                <span className="disabled-badge">Coming Soon</span>
+                            <span className="section-title">Settings</span>
+                            <span className={`expand-icon ${settingsExpanded ? 'expanded' : ''}`}>
+                                <Icon name="chevron-right" />
                             </span>
                         </div>
+
+                        {settingsExpanded && (
+                            <div className="section-items settings-items">
+                                <div className="setting-item">
+                                    <label htmlFor="max-tabs-input">
+                                        <span className="setting-label">Max Tabs per Pane</span>
+                                        <span className="setting-description">
+                                            Limit the number of open tabs (1-50)
+                                        </span>
+                                    </label>
+                                    <input
+                                        id="max-tabs-input"
+                                        type="number"
+                                        min="1"
+                                        max="50"
+                                        value={maxTabsPerPane}
+                                        onChange={(e) => {
+                                            const value = parseInt(e.target.value, 10);
+                                            if (value >= 1 && value <= 50 && onMaxTabsChange) {
+                                                onMaxTabsChange(value);
+                                            }
+                                        }}
+                                        className="setting-input"
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

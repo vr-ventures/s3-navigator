@@ -7,12 +7,13 @@ import { ImageViewer } from './ImageViewer';
 import { FolderBrowser } from './FolderBrowser';
 import { S3FileSelector } from './S3FileSelector';
 import { LoadingSkeleton } from './LoadingSkeleton';
+import { TabBar } from './TabBar';
 import { PaneState } from '../types/workspace';
 
 interface PaneContentProps {
     pane: PaneState;
     onNavigate: (key: string) => void;
-    onFileSelect: (key: string) => void;
+    onFileSelect: (key: string, openInNewTab?: boolean) => void;
     onBackToSelector: () => void;
     onBackToFolder: () => void;
     onBookmarkFolder: (bucket: string, prefix: string) => void;
@@ -20,6 +21,9 @@ interface PaneContentProps {
     onSplitPane?: () => void;
     onOpenInNewWindow?: () => void;
     onBucketSelect?: (bucket: string, key: string) => void;
+    onTabSwitch?: (tabId: string) => void;
+    onTabClose?: (tabId: string) => void;
+    onCloseAllTabs?: () => void;
 }
 
 export const PaneContent: React.FC<PaneContentProps> = ({
@@ -32,9 +36,12 @@ export const PaneContent: React.FC<PaneContentProps> = ({
     isBookmarked,
     onSplitPane,
     onOpenInNewWindow,
-    onBucketSelect
+    onBucketSelect,
+    onTabSwitch,
+    onTabClose,
+    onCloseAllTabs
 }) => {
-    const { type, loading, error, folderData, fileData, bucket, prefix } = pane;
+    const { type, loading, error, folderData, fileData, bucket, prefix, tabs, activeTabId } = pane;
 
     if (loading) {
         return <LoadingSkeleton type={type === 'viewer' ? 'viewer' : 'folder'} />;
@@ -68,19 +75,29 @@ export const PaneContent: React.FC<PaneContentProps> = ({
             if (!folderData) return null;
             return (
                 <div className="pane-content browser-pane">
+                    {tabs.length > 0 && onTabSwitch && onTabClose && onCloseAllTabs && (
+                        <TabBar
+                            tabs={tabs}
+                            activeTabId={activeTabId}
+                            onTabClick={onTabSwitch}
+                            onTabClose={onTabClose}
+                            onCloseAll={onCloseAllTabs}
+                        />
+                    )}
                     <FolderBrowser
                         folders={folderData.folders}
                         files={folderData.files}
                         currentPrefix={prefix}
                         currentBucket={bucket}
                         onNavigate={onNavigate}
-                        onFileSelect={onFileSelect}
+                        onFileSelect={(key) => onFileSelect(key, false)}
+                        onOpenInNewTab={(key) => onFileSelect(key, true)}
                         onBookmarkFolder={onBookmarkFolder}
                         isBookmarked={isBookmarked}
                         onOpenInNewWindow={onOpenInNewWindow ? (key: string) => {
                             // Open the file in a new window
                             // We need to trigger file selection first
-                            onFileSelect(key);
+                            onFileSelect(key, false);
                             // Then open in new window after a brief delay
                             setTimeout(() => {
                                 if (onOpenInNewWindow) onOpenInNewWindow();
@@ -121,6 +138,15 @@ export const PaneContent: React.FC<PaneContentProps> = ({
 
             return (
                 <div className="viewer-container pane-content viewer-pane">
+                    {tabs.length > 0 && onTabSwitch && onTabClose && onCloseAllTabs && (
+                        <TabBar
+                            tabs={tabs}
+                            activeTabId={activeTabId}
+                            onTabClick={onTabSwitch}
+                            onTabClose={onTabClose}
+                            onCloseAll={onCloseAllTabs}
+                        />
+                    )}
                     <div className="viewer-header">
                         <div className="header-left">
                             <h2><Icon name={`filetype-${fileData.type}`} /> {fileName}</h2>

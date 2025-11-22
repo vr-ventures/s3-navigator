@@ -4,7 +4,7 @@ import { Breadcrumb } from './components/Breadcrumb';
 import { Sidebar } from './components/Sidebar';
 import { WorkspaceLayout } from './components/WorkspaceLayout';
 import { useBookmarkedBuckets } from './hooks/useBookmarkedBuckets';
-import { WorkspaceState, PaneState } from './types/workspace';
+import { WorkspaceState, PaneState, Tab, FileTab, FolderTab } from './types/workspace';
 import { S3ObjectResult, S3ListResult } from './types/electron';
 
 const App: React.FC = () => {
@@ -17,6 +17,8 @@ const App: React.FC = () => {
       prefix: '',
       folderData: null,
       fileData: null,
+      tabs: [],
+      activeTabId: null,
       error: null,
       loading: false
     }],
@@ -25,13 +27,19 @@ const App: React.FC = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [sidebarWidth, setSidebarWidth] = useState<number>(250);
+  const [maxTabsPerPane, setMaxTabsPerPane] = useState<number>(10);
   const { bookmarks, addBookmark, removeBookmark, isBookmarked } = useBookmarkedBuckets();
 
-  // Load sidebar width from localStorage
+  // Load sidebar width and max tabs from localStorage
   useEffect(() => {
     const savedWidth = localStorage.getItem('s3-navigator-sidebar-width');
     if (savedWidth) {
       setSidebarWidth(parseInt(savedWidth, 10));
+    }
+
+    const savedMaxTabs = localStorage.getItem('s3-navigator-max-tabs');
+    if (savedMaxTabs) {
+      setMaxTabsPerPane(parseInt(savedMaxTabs, 10));
     }
 
     // Check for URL parameters (New Window mode)
@@ -53,6 +61,262 @@ const App: React.FC = () => {
   };
 
   const getPane = (paneId: string) => workspace.panes.find(p => p.id === paneId);
+
+  // Tab Management Handlers
+  const handleOpenFileInTab = async (paneId: string, bucket: string, key: string, createNewTab: boolean = false) => {
+    const pane = getPane(paneId);
+    if (!pane) return;
+
+    updatePane(paneId, { loading: true, error: null });
+
+    try {
+      const data = await window.electron.s3.getObject(bucket, key);
+      const fileName = key.split('/').pop() || key;
+      const parentPrefix = key.substring(0, key.lastIndexOf('/') + 1);
+
+      const newTab: FileTab = {
+        id: `tab-${Date.now()}-${Math.random()}`,
+        type: 'file',
+        bucket,
+        key,
+        fileName,
+        fileData: data
+      };
+
+      setWorkspace(prev => ({
+        ...prev,
+        panes: prev.panes.map(p => {
+          if (p.id !== paneId) return p;
+
+          let updatedTabs = [...p.tabs];
+
+          if (createNewTab) {
+            // Check tab limit
+            if (updatedTabs.length >= maxTabsPerPane) {
+              // Remove oldest non-pinned tab
+              const nonPinnedIndex = updatedTabs.findIndex(t => !t.isPinned);
+              if (nonPinnedIndex !== -1) {
+                updatedTabs.splice(nonPinnedIndex, 1);
+              } else {
+                // All tabs are pinned, don't add new tab
+                return p;
+              }
+            }
+            updatedTabs.push(newTab);
+          } else {
+            // Replace active tab or add new if no tabs
+            if (p.activeTabId) {
+              const activeIndex = updatedTabs.findIndex(t => t.id === p.activeTabId);
+              if (activeIndex !== -1) {
+                updatedTabs[activeIndex] = newTab;
+              } else {
+                updatedTabs.push(newTab);
+              }
+            } else {
+              updatedTabs = [newTab];
+            }
+          }
+
+          return {
+            ...p,
+            type: 'viewer' as const,
+            bucket,
+            prefix: parentPrefix,
+            tabs: updatedTabs,
+            activeTabId: newTab.id,
+            fileData: data,
+            loading: false
+          };
+        })
+      }));
+    } catch (err) {
+      updatePane(paneId, {
+        loading: false,
+        error: err instanceof Error ? err.message : 'Failed to load file'
+      });
+    }
+  };
+
+  const handleOpenFolderInTab = async (paneId: string, bucket: string, prefix: string, createNewTab: boolean = false) => {
+    const pane = getPane(paneId);
+    if (!pane) return;
+
+    updatePane(paneId, { loading: true, error: null });
+
+    try {
+      const data = await window.electron.s3.listObjects(bucket, prefix);
+      const folderName = prefix ? prefix.split('/').filter(Boolean).pop() || prefix : bucket;
+
+      const newTab: FolderTab = {
+        id: `tab-${Date.now()}-${Math.random()}`,
+        type: 'folder',
+        bucket,
+        prefix,
+        folderName,
+        folderData: data
+      };
+
+      setWorkspace(prev => ({
+        ...prev,
+        panes: prev.panes.map(p => {
+          if (p.id !== paneId) return p;
+
+          let updatedTabs = [...p.tabs];
+
+          if (createNewTab) {
+            // Check tab limit
+            if (updatedTabs.length >= maxTabsPerPane) {
+              // Remove oldest non-pinned tab
+              const nonPinnedIndex = updatedTabs.findIndex(t => !t.isPinned);
+              if (nonPinnedIndex !== -1) {
+                updatedTabs.splice(nonPinnedIndex, 1);
+              } else {
+                return p;
+              }
+            }
+            updatedTabs.push(newTab);
+          } else {
+            // Replace active tab or add new if no tabs
+            if (p.activeTabId) {
+              const activeIndex = updatedTabs.findIndex(t => t.id === p.activeTabId);
+              if (activeIndex !== -1) {
+                updatedTabs[activeIndex] = newTab;
+              } else {
+                updatedTabs.push(newTab);
+              }
+            } else {
+              updatedTabs = [newTab];
+            }
+          }
+
+          return {
+            ...p,
+            type: 'browser' as const,
+            bucket,
+            prefix,
+            tabs: updatedTabs,
+            activeTabId: newTab.id,
+            folderData: data,
+            loading: false
+          };
+        })
+      }));
+    } catch (err) {
+      updatePane(paneId, {
+        loading: false,
+        error: err instanceof Error ? err.message : 'Failed to load folder'
+      });
+    }
+  };
+
+  const handleSwitchTab = (paneId: string, tabId: string) => {
+    setWorkspace(prev => ({
+      ...prev,
+      panes: prev.panes.map(p => {
+        if (p.id !== paneId) return p;
+
+        const tab = p.tabs.find(t => t.id === tabId);
+        if (!tab) return p;
+
+        if (tab.type === 'file') {
+          return {
+            ...p,
+            type: 'viewer' as const,
+            activeTabId: tabId,
+            bucket: tab.bucket,
+            prefix: tab.key.substring(0, tab.key.lastIndexOf('/') + 1),
+            fileData: tab.fileData,
+            folderData: null
+          };
+        } else {
+          return {
+            ...p,
+            type: 'browser' as const,
+            activeTabId: tabId,
+            bucket: tab.bucket,
+            prefix: tab.prefix,
+            folderData: tab.folderData,
+            fileData: null
+          };
+        }
+      })
+    }));
+  };
+
+  const handleCloseTab = (paneId: string, tabId: string) => {
+    setWorkspace(prev => ({
+      ...prev,
+      panes: prev.panes.map(p => {
+        if (p.id !== paneId) return p;
+
+        const updatedTabs = p.tabs.filter(t => t.id !== tabId);
+
+        // If no tabs left, return to selector
+        if (updatedTabs.length === 0) {
+          return {
+            ...p,
+            type: 'selector' as const,
+            tabs: [],
+            activeTabId: null,
+            fileData: null,
+            folderData: null
+          };
+        }
+
+        // If closing active tab, switch to next or previous
+        let newActiveTabId = p.activeTabId;
+        if (tabId === p.activeTabId) {
+          const closedIndex = p.tabs.findIndex(t => t.id === tabId);
+          // Try next tab first, then previous
+          const nextTab = updatedTabs[closedIndex] || updatedTabs[closedIndex - 1];
+          newActiveTabId = nextTab.id;
+
+          // Update pane state based on new active tab
+          if (nextTab.type === 'file') {
+            return {
+              ...p,
+              type: 'viewer' as const,
+              tabs: updatedTabs,
+              activeTabId: newActiveTabId,
+              bucket: nextTab.bucket,
+              prefix: nextTab.key.substring(0, nextTab.key.lastIndexOf('/') + 1),
+              fileData: nextTab.fileData,
+              folderData: null
+            };
+          } else {
+            return {
+              ...p,
+              type: 'browser' as const,
+              tabs: updatedTabs,
+              activeTabId: newActiveTabId,
+              bucket: nextTab.bucket,
+              prefix: nextTab.prefix,
+              folderData: nextTab.folderData,
+              fileData: null
+            };
+          }
+        }
+
+        return {
+          ...p,
+          tabs: updatedTabs,
+          activeTabId: newActiveTabId
+        };
+      })
+    }));
+  };
+
+  const handleCloseAllTabs = (paneId: string) => {
+    updatePane(paneId, {
+      type: 'selector',
+      tabs: [],
+      activeTabId: null,
+      fileData: null,
+      folderData: null,
+      bucket: '',
+      prefix: ''
+    });
+  };
 
   const loadFolder = async (paneId: string, bucket: string, prefix: string) => {
     updatePane(paneId, { loading: true, error: null });
@@ -105,14 +369,16 @@ const App: React.FC = () => {
   const handleNavigate = async (paneId: string, key: string) => {
     const pane = getPane(paneId);
     if (pane) {
-      await loadFolder(paneId, pane.bucket, key);
+      // Use tab handler instead of loadFolder
+      await handleOpenFolderInTab(paneId, pane.bucket, key, false);
     }
   };
 
-  const handleFileSelect = async (paneId: string, key: string) => {
+  const handleFileSelect = async (paneId: string, key: string, openInNewTab: boolean = false) => {
     const pane = getPane(paneId);
     if (pane) {
-      await loadFile(paneId, pane.bucket, key);
+      // Use tab handler instead of loadFile
+      await handleOpenFileInTab(paneId, pane.bucket, key, openInNewTab);
     }
   };
 
@@ -141,7 +407,9 @@ const App: React.FC = () => {
     const newPaneId = `pane-${Date.now()}`;
     const newPane: PaneState = {
       ...sourcePane,
-      id: newPaneId
+      id: newPaneId,
+      tabs: [], // New pane starts with empty tabs
+      activeTabId: null
     };
 
     setWorkspace(prev => ({
@@ -192,9 +460,9 @@ const App: React.FC = () => {
     }
 
     if (!key || key.endsWith('/')) {
-      await loadFolder(paneId, bucket, key || '');
+      await handleOpenFolderInTab(paneId, bucket, key || '', false);
     } else {
-      await loadFile(paneId, bucket, key);
+      await handleOpenFileInTab(paneId, bucket, key, false);
     }
   };
 
@@ -204,6 +472,11 @@ const App: React.FC = () => {
   const handleSidebarWidthChange = (width: number) => {
     setSidebarWidth(width);
     localStorage.setItem('s3-navigator-sidebar-width', width.toString());
+  };
+
+  const handleMaxTabsChange = (maxTabs: number) => {
+    setMaxTabsPerPane(maxTabs);
+    localStorage.setItem('s3-navigator-max-tabs', maxTabs.toString());
   };
 
   const handleSidebarBucketSelect = async (bucket: string, prefix: string) => {
@@ -238,6 +511,8 @@ const App: React.FC = () => {
         onRemoveBookmark={removeBookmark}
         width={sidebarWidth}
         onWidthChange={handleSidebarWidthChange}
+        maxTabsPerPane={maxTabsPerPane}
+        onMaxTabsChange={handleMaxTabsChange}
       />
 
       <div className="app-content">
@@ -271,6 +546,9 @@ const App: React.FC = () => {
             onBookmarkFolder={handleBookmarkToggle}
             isBookmarked={isBookmarked}
             onBucketSelect={handleBucketSelect}
+            onTabSwitch={handleSwitchTab}
+            onTabClose={handleCloseTab}
+            onCloseAllTabs={handleCloseAllTabs}
           />
         </main>
 

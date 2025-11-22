@@ -12,12 +12,16 @@ interface WorkspaceLayoutProps {
     onOpenInNewWindow: (paneId: string) => void;
     // Pass-through props for PaneContent
     onNavigate: (paneId: string, key: string) => void;
-    onFileSelect: (paneId: string, key: string) => void;
+    onFileSelect: (paneId: string, key: string, openInNewTab?: boolean) => void;
     onBackToSelector: (paneId: string) => void;
     onBackToFolder: (paneId: string) => void;
     onBookmarkFolder: (bucket: string, prefix: string) => void;
     isBookmarked: (bucket: string, prefix?: string) => boolean;
     onBucketSelect: (paneId: string, bucket: string, key: string) => void;
+    // Tab management
+    onTabSwitch: (paneId: string, tabId: string) => void;
+    onTabClose: (paneId: string, tabId: string) => void;
+    onCloseAllTabs: (paneId: string) => void;
 }
 
 export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
@@ -32,7 +36,10 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
     onBackToFolder,
     onBookmarkFolder,
     isBookmarked,
-    onBucketSelect
+    onBucketSelect,
+    onTabSwitch,
+    onTabClose,
+    onCloseAllTabs
 }) => {
     const renderPane = (pane: PaneState) => (
         <div
@@ -55,7 +62,7 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
             <PaneContent
                 pane={pane}
                 onNavigate={(key) => onNavigate(pane.id, key)}
-                onFileSelect={(key) => onFileSelect(pane.id, key)}
+                onFileSelect={(key, openInNewTab) => onFileSelect(pane.id, key, openInNewTab)}
                 onBackToSelector={() => onBackToSelector(pane.id)}
                 onBackToFolder={() => onBackToFolder(pane.id)}
                 onBookmarkFolder={onBookmarkFolder}
@@ -63,6 +70,9 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
                 onSplitPane={() => onSplitPane(pane.id)}
                 onOpenInNewWindow={() => onOpenInNewWindow(pane.id)}
                 onBucketSelect={(bucket, key) => onBucketSelect(pane.id, bucket, key)}
+                onTabSwitch={(tabId) => onTabSwitch(pane.id, tabId)}
+                onTabClose={(tabId) => onTabClose(pane.id, tabId)}
+                onCloseAllTabs={() => onCloseAllTabs(pane.id)}
             />
         </div>
     );
