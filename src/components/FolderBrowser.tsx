@@ -62,7 +62,15 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
 
       // If no local results and search looks like a path, suggest navigation
       if (localSearchTerm.includes('/') || localSearchTerm.includes('_')) {
-        setSearchMessage('💡 Press Enter to navigate to this path');
+        // Check if it looks like a file (has extension)
+        const lastPart = localSearchTerm.split('/').filter(Boolean).pop() || '';
+        const hasExtension = lastPart.includes('.');
+
+        if (hasExtension) {
+          setSearchMessage(`💡 Press Enter to open file: ${lastPart}`);
+        } else {
+          setSearchMessage('💡 Press Enter to navigate to this path');
+        }
       } else {
         setSearchMessage('No matching files or folders found in current view.');
       }
@@ -72,38 +80,35 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
     return () => clearTimeout(timeoutId);
   }, [localSearchTerm, currentBucket, currentPrefix, folders, files]);
 
-  // Handle Enter key in search input to navigate to path
+  // Handle Enter key in search input to navigate to path or open file
   const handleSearchKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && localSearchTerm.trim()) {
       // Check if there are any filtered results
       const hasLocalResults = filteredFolders.length > 0 || filteredFiles.length > 0;
 
       if (!hasLocalResults && (localSearchTerm.includes('/') || localSearchTerm.includes('_'))) {
-        // Treat as navigation path
+        // Treat as navigation/file path
         let targetPath = localSearchTerm.trim();
 
-        // If it doesn't end with /, it might be a file, so navigate to its parent folder
-        if (!targetPath.endsWith('/')) {
-          // Check if it looks like a file (has an extension) or folder
-          const lastPart = targetPath.split('/').pop() || '';
-          const hasExtension = lastPart.includes('.');
-
-          if (!hasExtension) {
-            // Likely a folder, add trailing slash
-            targetPath += '/';
-          } else {
-            // It's a file, navigate to parent folder
-            targetPath = targetPath.substring(0, targetPath.lastIndexOf('/') + 1);
-          }
-        }
-
-        // Construct full path
+        // Construct full path (handle absolute vs relative)
         const fullPath = targetPath.startsWith('/')
           ? targetPath.substring(1)
           : currentPrefix + targetPath;
 
-        onNavigate(fullPath);
-        setLocalSearchTerm(''); // Clear search after navigation
+        // Check if it looks like a file (has an extension)
+        const lastPart = fullPath.split('/').filter(Boolean).pop() || '';
+        const hasExtension = lastPart.includes('.');
+
+        if (hasExtension) {
+          // It's a file - open it directly
+          onFileSelect(fullPath);
+        } else {
+          // It's a folder - navigate to it
+          const folderPath = fullPath.endsWith('/') ? fullPath : fullPath + '/';
+          onNavigate(folderPath);
+        }
+
+        setLocalSearchTerm(''); // Clear search after navigation/opening
       }
     }
   };
@@ -410,18 +415,6 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
                         title={`Open ${file.name} in new tab`}
                       >
                         <Icon name="plus-square" />
-                      </button>
-                    )}
-                    {onOpenInNewWindow && (
-                      <button
-                        className="open-new-window-button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenInNewWindow(file.key);
-                        }}
-                        title={`Open ${file.name} in new window`}
-                      >
-                        <Icon name="box-arrow-up-right" />
                       </button>
                     )}
                     <button

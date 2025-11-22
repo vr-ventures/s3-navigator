@@ -527,6 +527,7 @@ const App: React.FC = () => {
               onBookmarkBucket={(bucket) => handleBookmarkToggle(bucket, '')}
               onBookmarkFolder={(bucket, prefix) => handleBookmarkToggle(bucket, prefix)}
               isBookmarked={(bucket, prefix) => isBookmarked(bucket, prefix || '')}
+              onFileSelect={(key) => handleFileSelect(workspace.activePaneId, key)}
             />
           </div>
         )}

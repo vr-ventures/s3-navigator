@@ -1531,6 +1531,67 @@ body {
   user-select: none;
 }
 
+/* Address Bar Edit Mode Styles */
+.breadcrumb-clickable-area {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+  flex: 1;
+}
+
+.breadcrumb-clickable-area:hover {
+  background-color: rgba(184, 188, 146, 0.1);
+}
+
+.address-bar-edit-mode {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.address-bar-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  border: 2px solid #b8bc92;
+  border-radius: 6px;
+  outline: none;
+  font-family: 'Courier New', monospace;
+  background: #fff;
+  color: #333;
+  transition: all 0.2s ease;
+}
+
+.address-bar-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.address-bar-submit {
+  background: #b8bc92;
+  border: 1px solid #b8bc92;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  color: #333;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.address-bar-submit:hover {
+  background: #a8ac82;
+  border-color: #a8ac82;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(184, 188, 146, 0.3);
+}
+
 /* Viewer Container Styles */
 .viewer-container {
   background: white;
