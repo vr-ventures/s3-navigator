@@ -24,6 +24,7 @@ interface PaneContentProps {
     onTabSwitch?: (tabId: string) => void;
     onTabClose?: (tabId: string) => void;
     onCloseAllTabs?: () => void;
+    onOpenFilesInSplit?: (fileKeys: string[]) => void;
 }
 
 export const PaneContent: React.FC<PaneContentProps> = ({
@@ -39,7 +40,8 @@ export const PaneContent: React.FC<PaneContentProps> = ({
     onBucketSelect,
     onTabSwitch,
     onTabClose,
-    onCloseAllTabs
+    onCloseAllTabs,
+    onOpenFilesInSplit
 }) => {
     const { type, loading, error, folderData, fileData, bucket, prefix, tabs, activeTabId } = pane;
 
@@ -74,7 +76,7 @@ export const PaneContent: React.FC<PaneContentProps> = ({
         case 'browser':
             if (!folderData) return null;
             return (
-                <div className="pane-content browser-pane">
+                <div className="pane-content browser-pane browser-container">
                     {tabs.length > 0 && onTabSwitch && onTabClose && onCloseAllTabs && (
                         <TabBar
                             tabs={tabs}
@@ -103,6 +105,7 @@ export const PaneContent: React.FC<PaneContentProps> = ({
                                 if (onOpenInNewWindow) onOpenInNewWindow();
                             }, 100);
                         } : undefined}
+                        onOpenFilesInSplit={onOpenFilesInSplit}
                     />
                 </div>
             );
@@ -152,7 +155,9 @@ export const PaneContent: React.FC<PaneContentProps> = ({
                             <h2><Icon name={`filetype-${fileData.type}`} /> {fileName}</h2>
                         </div>
                     </div>
-                    {renderViewer()}
+                    <div className="viewer-content-scrollable">
+                        {renderViewer()}
+                    </div>
                 </div>
             );
 

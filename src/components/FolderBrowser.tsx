@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { S3Item } from '../types/electron';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import Icon from './Icon';
+import { FileSelectionToolbar } from './FileSelectionToolbar';
 
 interface FolderBrowserProps {
   folders: S3Item[];
@@ -14,6 +15,7 @@ interface FolderBrowserProps {
   isBookmarked?: (bucket: string, prefix?: string) => boolean;
   onOpenInNewWindow?: (key: string) => void;
   onOpenInNewTab?: (key: string) => void;
+  onOpenFilesInSplit?: (fileKeys: string[]) => void;
 }
 
 export const FolderBrowser: React.FC<FolderBrowserProps> = ({
@@ -26,7 +28,8 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
   onBookmarkFolder,
   isBookmarked,
   onOpenInNewWindow,
-  onOpenInNewTab
+  onOpenInNewTab,
+  onOpenFilesInSplit
 }) => {
   const [jumpPath, setJumpPath] = useState('');
   const [isJumping, setIsJumping] = useState(false);
@@ -34,6 +37,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
   const [showLocalSearch, setShowLocalSearch] = useState(false);
   const [localSearchTerm, setLocalSearchTerm] = useState('');
   const [searchMessage, setSearchMessage] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const jumpInputRef = useRef<HTMLInputElement>(null);
 
   // Handle search/navigation
@@ -309,6 +313,30 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
     }
   };
 
+  // File selection handlers
+  const handleToggleFileSelection = (fileKey: string) => {
+    setSelectedFiles(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(fileKey)) {
+        newSet.delete(fileKey);
+      } else {
+        newSet.add(fileKey);
+      }
+      return newSet;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedFiles(new Set());
+  };
+
+  const handleOpenInSplit = () => {
+    if (onOpenFilesInSplit && selectedFiles.size >= 2 && selectedFiles.size <= 3) {
+      onOpenFilesInSplit(Array.from(selectedFiles));
+      handleClearSelection();
+    }
+  };
+
   const totalItems = folders.length + files.length;
   const suggestions = getSuggestions();
 
@@ -343,6 +371,15 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
         </div>
       </div>
 
+      {/* File Selection Toolbar */}
+      {onOpenFilesInSplit && selectedFiles.size > 0 && (
+        <FileSelectionToolbar
+          selectedCount={selectedFiles.size}
+          onOpenInSplit={handleOpenInSplit}
+          onClearSelection={handleClearSelection}
+        />
+      )}
+
       {/* Search message */}
       {searchMessage && (
         <div className="search-message">
@@ -350,10 +387,11 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
         </div>
       )}
 
-      <div className="folder-content">
+      <div className="folder-content-wrapper">
         <table className="file-table">
           <thead>
             <tr>
+              {onOpenFilesInSplit && <th className="checkbox-column"></th>}
               <th>Name</th>
               <th>Type</th>
               <th>Size</th>
@@ -367,6 +405,7 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
 
               return (
                 <tr key={folder.key} className="folder-row" onClick={() => onNavigate(folder.key)}>
+                  {onOpenFilesInSplit && <td className="checkbox-column"></td>}
                   <td>
                     <span className="file-icon">
                       <Icon name={getFileIcon(folder.type, folder.name)} />
@@ -392,18 +431,35 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
                 </tr>
               );
             })}
-            {filteredFiles.map((file) => (
-              <tr key={file.key} className="file-row" onClick={() => onFileSelect(file.key)}>
-                <td>
-                  <span className="file-icon">
-                    <Icon name={getFileIcon(file.type, file.name)} />
-                  </span>
-                  <span className="file-name">{file.name}</span>
-                </td>
-                <td>{file.type.charAt(0).toUpperCase() + file.type.slice(1)}</td>
-                <td>{formatFileSize(file.size)}</td>
-                <td>{formatDate(file.lastModified)}</td>
-                <td>
+            {filteredFiles.map((file) => {
+              const isSelected = selectedFiles.has(file.key);
+              return (
+                <tr
+                  key={file.key}
+                  className={`file-row ${isSelected ? 'selected' : ''}`}
+                  onClick={() => onFileSelect(file.key)}
+                >
+                  {onOpenFilesInSplit && (
+                    <td className="checkbox-column">
+                      <input
+                        type="checkbox"
+                        className="file-checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleFileSelection(file.key)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
+                  )}
+                  <td>
+                    <span className="file-icon">
+                      <Icon name={getFileIcon(file.type, file.name)} />
+                    </span>
+                    <span className="file-name">{file.name}</span>
+                  </td>
+                  <td>{file.type.charAt(0).toUpperCase() + file.type.slice(1)}</td>
+                  <td>{formatFileSize(file.size)}</td>
+                  <td>{formatDate(file.lastModified)}</td>
+                  <td>
                   <div className="action-buttons">
                     {onOpenInNewTab && (
                       <button
@@ -434,7 +490,8 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
 

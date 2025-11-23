@@ -41,7 +41,7 @@ export interface PaneState {
 }
 
 export interface WorkspaceState {
-    layout: 'single' | 'split-vertical';
+    layout: 'single' | 'split-vertical-2' | 'split-vertical-3';
     panes: PaneState[];
     activePaneId: string;
 }

@@ -414,10 +414,100 @@ const App: React.FC = () => {
 
     setWorkspace(prev => ({
       ...prev,
-      layout: 'split-vertical', // Currently only supporting vertical split for 2 panes
+      layout: 'split-vertical-2',
       panes: [...prev.panes, newPane],
       activePaneId: newPaneId
     }));
+  };
+
+  const handleOpenFilesInSplit = async (paneId: string, fileKeys: string[]) => {
+    const sourcePane = getPane(paneId);
+    if (!sourcePane || fileKeys.length < 2 || fileKeys.length > 3) return;
+
+    const bucket = sourcePane.bucket;
+    const paneCount = fileKeys.length;
+    const layout: 'split-vertical-2' | 'split-vertical-3' =
+      paneCount === 2 ? 'split-vertical-2' : 'split-vertical-3';
+
+    // Load all files first
+    const fileDataPromises = fileKeys.map(key =>
+      window.electron.s3.getObject(bucket, key)
+    );
+
+    // Create panes with loading state
+    const paneIds: string[] = [];
+    for (let i = 0; i < paneCount; i++) {
+      paneIds.push(`pane-split-${Date.now()}-${i}`);
+    }
+
+    const loadingPanes: PaneState[] = fileKeys.map((key, i) => ({
+      id: paneIds[i],
+      type: 'viewer' as const,
+      bucket,
+      prefix: key.substring(0, key.lastIndexOf('/') + 1),
+      folderData: null,
+      fileData: null,
+      tabs: [],
+      activeTabId: null,
+      error: null,
+      loading: true
+    }));
+
+    // Set workspace with loading panes
+    setWorkspace({
+      layout,
+      panes: loadingPanes,
+      activePaneId: paneIds[0]
+    });
+
+    // Wait for all files to load
+    try {
+      const filesData = await Promise.all(fileDataPromises);
+
+      // Create tabs and panes with loaded data
+      const loadedPanes: PaneState[] = fileKeys.map((key, i) => {
+        const fileName = key.split('/').pop() || key;
+        const fileData = filesData[i];
+        const parentPrefix = key.substring(0, key.lastIndexOf('/') + 1);
+
+        const newTab: FileTab = {
+          id: `tab-${Date.now()}-${i}`,
+          type: 'file',
+          bucket,
+          key,
+          fileName,
+          fileData
+        };
+
+        return {
+          id: paneIds[i],
+          type: 'viewer' as const,
+          bucket,
+          prefix: parentPrefix,
+          folderData: null,
+          fileData,
+          tabs: [newTab],
+          activeTabId: newTab.id,
+          error: null,
+          loading: false
+        };
+      });
+
+      // Update workspace with loaded panes
+      setWorkspace({
+        layout,
+        panes: loadedPanes,
+        activePaneId: paneIds[0]
+      });
+    } catch (err) {
+      console.error('Failed to load files for split view:', err);
+      // Revert to single pane on error
+      setWorkspace(prev => ({
+        ...prev,
+        layout: 'single',
+        panes: [prev.panes[0]]
+      }));
+    }
   };
 
   const handleClosePane = (paneId: string) => {
@@ -550,6 +640,7 @@ const App: React.FC = () => {
             onTabSwitch={handleSwitchTab}
             onTabClose={handleCloseTab}
             onCloseAllTabs={handleCloseAllTabs}
+            onOpenFilesInSplit={handleOpenFilesInSplit}
           />
         </main>
 

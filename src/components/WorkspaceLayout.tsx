@@ -22,6 +22,8 @@ interface WorkspaceLayoutProps {
     onTabSwitch: (paneId: string, tabId: string) => void;
     onTabClose: (paneId: string, tabId: string) => void;
     onCloseAllTabs: (paneId: string) => void;
+    // Split view
+    onOpenFilesInSplit: (paneId: string, fileKeys: string[]) => void;
 }
 
 export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
@@ -39,7 +41,8 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
     onBucketSelect,
     onTabSwitch,
     onTabClose,
-    onCloseAllTabs
+    onCloseAllTabs,
+    onOpenFilesInSplit
 }) => {
     const renderPane = (pane: PaneState) => (
         <div
@@ -73,6 +76,7 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
                 onTabSwitch={(tabId) => onTabSwitch(pane.id, tabId)}
                 onTabClose={(tabId) => onTabClose(pane.id, tabId)}
                 onCloseAllTabs={() => onCloseAllTabs(pane.id)}
+                onOpenFilesInSplit={(fileKeys) => onOpenFilesInSplit(pane.id, fileKeys)}
             />
         </div>
     );
@@ -85,6 +89,39 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
         );
     }
 
+    if (workspace.layout === 'split-vertical-2' && workspace.panes.length === 2) {
+        return (
+            <PanelGroup direction="horizontal">
+                <Panel defaultSize={50} minSize={20}>
+                    {renderPane(workspace.panes[0])}
+                </Panel>
+                <PanelResizeHandle className="resize-handle-vertical" />
+                <Panel defaultSize={50} minSize={20}>
+                    {renderPane(workspace.panes[1])}
+                </Panel>
+            </PanelGroup>
+        );
+    }
+
+    if (workspace.layout === 'split-vertical-3' && workspace.panes.length === 3) {
+        return (
+            <PanelGroup direction="horizontal">
+                <Panel defaultSize={33} minSize={20}>
+                    {renderPane(workspace.panes[0])}
+                </Panel>
+                <PanelResizeHandle className="resize-handle-vertical" />
+                <Panel defaultSize={33} minSize={20}>
+                    {renderPane(workspace.panes[1])}
+                </Panel>
+                <PanelResizeHandle className="resize-handle-vertical" />
+                <Panel defaultSize={33} minSize={20}>
+                    {renderPane(workspace.panes[2])}
+                </Panel>
+            </PanelGroup>
+        );
+    }
+
+    // Fallback for 2 panes (backwards compatibility)
     return (
         <PanelGroup direction="horizontal">
             <Panel defaultSize={50} minSize={20}>

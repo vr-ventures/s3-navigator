@@ -165,17 +165,50 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
           </div>
         ) : (
           // Display mode - show clickable breadcrumb
-          <div className="breadcrumb-clickable-area" onClick={enterEditMode} title="Click to edit path (or press Ctrl/Cmd+L)">
-            <button
-              className="breadcrumb-button bucket-button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onNavigate('');
-              }}
-              title={`Navigate to bucket root: ${bucket}`}
-            >
-              🪣 {bucket}
-            </button>
+          <>
+            <div className="breadcrumb-clickable-area" onClick={enterEditMode} title="Click to edit path (or press Ctrl/Cmd+L)">
+              <button
+                className="breadcrumb-button bucket-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigate('');
+                }}
+                title={`Navigate to bucket root: ${bucket}`}
+              >
+                🪣 {bucket}
+              </button>
+
+              {pathSegments.map((segment, index) => {
+                const isLast = index === pathSegments.length - 1;
+
+                return (
+                  <React.Fragment key={segment.path}>
+                    <span className="breadcrumb-separator">/</span>
+                    <button
+                      className={`breadcrumb-button folder-button ${isLast ? 'current' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onNavigate(segment.path);
+                      }}
+                      title={`Navigate to: ${segment.path}`}
+                    >
+                      <Icon name="folder" /> {segment.name}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+              <button
+                className="breadcrumb-edit-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  enterEditMode();
+                }}
+                title="Edit path (Ctrl/Cmd+L)"
+              >
+                <Icon name="arrow-right-circle" />
+              </button>
+            </div>
 
             {onBookmarkBucket && pathSegments.length === 0 && (
               <button
@@ -190,40 +223,19 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
               </button>
             )}
 
-            {pathSegments.map((segment, index) => {
-              const isLast = index === pathSegments.length - 1;
-              const isFolderBookmarked = isBookmarked ? isBookmarked(bucket, segment.path) : false;
-
-              return (
-                <React.Fragment key={segment.path}>
-                  <span className="breadcrumb-separator">/</span>
-                  <button
-                    className={`breadcrumb-button folder-button ${isLast ? 'current' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onNavigate(segment.path);
-                    }}
-                    title={`Navigate to: ${segment.path}`}
-                  >
-                    <Icon name="folder" /> {segment.name}
-                  </button>
-
-                  {isLast && onBookmarkFolder && (
-                    <button
-                      className={`breadcrumb-button bookmark-button ${isFolderBookmarked ? 'bookmarked' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onBookmarkFolder(bucket, segment.path);
-                      }}
-                      title={isFolderBookmarked ? `Remove from bookmarks` : `Bookmark current folder`}
-                    >
-                      {isFolderBookmarked ? <Icon name="star-fill" /> : <Icon name="star" />}
-                    </button>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
+            {pathSegments.length > 0 && onBookmarkFolder && (
+              <button
+                className={`breadcrumb-button bookmark-button ${isBookmarked ? isBookmarked(bucket, pathSegments[pathSegments.length - 1].path) ? 'bookmarked' : '' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBookmarkFolder && onBookmarkFolder(bucket, pathSegments[pathSegments.length - 1].path);
+                }}
+                title={isBookmarked && isBookmarked(bucket, pathSegments[pathSegments.length - 1].path) ? `Remove from bookmarks` : `Bookmark current folder`}
+              >
+                {isBookmarked && isBookmarked(bucket, pathSegments[pathSegments.length - 1].path) ? <Icon name="star-fill" /> : <Icon name="star" />}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
