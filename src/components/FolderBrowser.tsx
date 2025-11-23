@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { S3Item } from '../types/electron';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import Icon from './Icon';
+import { FileSelectionToolbar } from './FileSelectionToolbar';
 
 interface FolderBrowserProps {
   folders: S3Item[];
@@ -10,6 +11,11 @@ interface FolderBrowserProps {
   currentBucket: string;
   onNavigate: (key: string) => void;
   onFileSelect: (key: string) => void;
+  onBookmarkFolder?: (bucket: string, prefix: string) => void;
+  isBookmarked?: (bucket: string, prefix?: string) => boolean;
+  onOpenInNewWindow?: (key: string) => void;
+  onOpenInNewTab?: (key: string) => void;
+  onOpenFilesInSplit?: (fileKeys: string[]) => void;
 }
 
 export const FolderBrowser: React.FC<FolderBrowserProps> = ({
@@ -18,14 +24,98 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
   currentPrefix,
   currentBucket,
   onNavigate,
-  onFileSelect
+  onFileSelect,
+  onBookmarkFolder,
+  isBookmarked,
+  onOpenInNewWindow,
+  onOpenInNewTab,
+  onOpenFilesInSplit
 }) => {
   const [jumpPath, setJumpPath] = useState('');
   const [isJumping, setIsJumping] = useState(false);
   const [jumpError, setJumpError] = useState('');
   const [showLocalSearch, setShowLocalSearch] = useState(false);
   const [localSearchTerm, setLocalSearchTerm] = useState('');
+  const [searchMessage, setSearchMessage] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const jumpInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle search/navigation
+  useEffect(() => {
+    const handleSearchOrNavigate = async () => {
+      if (!localSearchTerm.trim()) {
+        setSearchMessage('');
+        return;
+      }
+
+      // First, filter current view (local search)
+      const localFolders = folders.filter(folder =>
+        folder.name.toLowerCase().includes(localSearchTerm.toLowerCase()) ||
+        folder.key.toLowerCase().includes(localSearchTerm.toLowerCase())
+      );
+      const localFiles = files.filter(file =>
+        file.name.toLowerCase().includes(localSearchTerm.toLowerCase()) ||
+        file.key.toLowerCase().includes(localSearchTerm.toLowerCase())
+      );
+
+      // If we have local results, just show them (no message needed)
+      if (localFolders.length > 0 || localFiles.length > 0) {
+        setSearchMessage('');
+        return;
+      }
+
+      // If no local results and search looks like a path, suggest navigation
+      if (localSearchTerm.includes('/') || localSearchTerm.includes('_')) {
+        // Check if it looks like a file (has extension)
+        const lastPart = localSearchTerm.split('/').filter(Boolean).pop() || '';
+        const hasExtension = lastPart.includes('.');
+
+        if (hasExtension) {
+          setSearchMessage(`💡 Press Enter to open file: ${lastPart}`);
+        } else {
+          setSearchMessage('💡 Press Enter to navigate to this path');
+        }
+      } else {
+        setSearchMessage('No matching files or folders found in current view.');
+      }
+    };
+
+    const timeoutId = setTimeout(handleSearchOrNavigate, 300); // Debounce 300ms
+    return () => clearTimeout(timeoutId);
+  }, [localSearchTerm, currentBucket, currentPrefix, folders, files]);
+
+  // Handle Enter key in search input to navigate to path or open file
+  const handleSearchKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && localSearchTerm.trim()) {
+      // Check if there are any filtered results
+      const hasLocalResults = filteredFolders.length > 0 || filteredFiles.length > 0;
+
+      if (!hasLocalResults && (localSearchTerm.includes('/') || localSearchTerm.includes('_'))) {
+        // Treat as navigation/file path
+        let targetPath = localSearchTerm.trim();
+
+        // Construct full path (handle absolute vs relative)
+        const fullPath = targetPath.startsWith('/')
+          ? targetPath.substring(1)
+          : currentPrefix + targetPath;
+
+        // Check if it looks like a file (has an extension)
+        const lastPart = fullPath.split('/').filter(Boolean).pop() || '';
+        const hasExtension = lastPart.includes('.');
+
+        if (hasExtension) {
+          // It's a file - open it directly
+          onFileSelect(fullPath);
+        } else {
+          // It's a folder - navigate to it
+          const folderPath = fullPath.endsWith('/') ? fullPath : fullPath + '/';
+          onNavigate(folderPath);
+        }
+
+        setLocalSearchTerm(''); // Clear search after navigation/opening
+      }
+    }
+  };
 
   // Handle direct navigation to a folder path
   const handleJumpToFolder = async () => {
@@ -77,13 +167,19 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
       .map(folder => folder.name);
   };
 
-  // Local search for current page (when enabled)
-  const filteredFolders = showLocalSearch
-    ? folders.filter(folder => folder.name.toLowerCase().includes(localSearchTerm.toLowerCase()))
+  // Local search for current page - always active
+  const filteredFolders = localSearchTerm
+    ? folders.filter(folder =>
+      folder.name.toLowerCase().includes(localSearchTerm.toLowerCase()) ||
+      folder.key.toLowerCase().includes(localSearchTerm.toLowerCase())
+    )
     : folders;
 
-  const filteredFiles = showLocalSearch
-    ? files.filter(file => file.name.toLowerCase().includes(localSearchTerm.toLowerCase()))
+  const filteredFiles = localSearchTerm
+    ? files.filter(file =>
+        file.name.toLowerCase().includes(localSearchTerm.toLowerCase()) ||
+        file.key.toLowerCase().includes(localSearchTerm.toLowerCase())
+      )
     : files;
 
   // Keyboard shortcuts
@@ -210,97 +306,92 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
     }
   };
 
+  const handleBookmarkClick = (folderKey: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (onBookmarkFolder) {
+      onBookmarkFolder(currentBucket, folderKey);
+    }
+  };
+
+  // File selection handlers
+  const handleToggleFileSelection = (fileKey: string) => {
+    setSelectedFiles(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(fileKey)) {
+        newSet.delete(fileKey);
+      } else {
+        newSet.add(fileKey);
+      }
+      return newSet;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedFiles(new Set());
+  };
+
+  const handleOpenInSplit = () => {
+    if (onOpenFilesInSplit && selectedFiles.size >= 2 && selectedFiles.size <= 3) {
+      onOpenFilesInSplit(Array.from(selectedFiles));
+      handleClearSelection();
+    }
+  };
+
   const totalItems = folders.length + files.length;
   const suggestions = getSuggestions();
 
   return (
     <div className="folder-browser">
-      {/* Jump to Folder Header */}
-      <div className="folder-navigation-header">
-        <div className="jump-container">
-          <div className="jump-input-wrapper">
-            <span className="jump-icon">
-              <Icon name="rocket" />
-            </span>
-            <input
-              ref={jumpInputRef}
-              type="text"
-              value={jumpPath}
-              onChange={(e) => setJumpPath(e.target.value)}
-              onKeyDown={handleJumpKeyDown}
-              placeholder="Jump to folder path... (Ctrl+G or type: folder-name/ or /absolute/path/)"
-              className="jump-input"
-              disabled={isJumping}
-            />
+      {/* Item count header with search */}
+      <div className="folder-count-header">
+        <span className="item-count">
+          <Icon name="folder" /> {filteredFolders.length} folders, <Icon name="file-text" /> {filteredFiles.length} files
+        </span>
+
+        {/* Search box */}
+        <div className="folder-search-box">
+          <Icon name="search" />
+          <input
+            type="text"
+            value={localSearchTerm}
+            onChange={(e) => setLocalSearchTerm(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Search files and folders..."
+            className="folder-search-input"
+          />
+          {localSearchTerm && (
             <button
-              onClick={handleJumpToFolder}
-              className="jump-button"
-              disabled={!jumpPath.trim() || isJumping}
+              onClick={() => setLocalSearchTerm('')}
+              className="clear-search-button"
+              title="Clear search"
             >
-              {isJumping ? <Icon name="arrow-clockwise" /> : <Icon name="arrow-right" />}
+              <Icon name="x" />
             </button>
-          </div>
-
-          {/* Auto-complete suggestions */}
-          {suggestions.length > 0 && jumpPath && (
-            <div className="suggestions-dropdown">
-              {suggestions.map((suggestion, index) => (
-                <button
-                  key={index}
-                  className="suggestion-item"
-                  onClick={() => {
-                    setJumpPath(suggestion);
-                    jumpInputRef.current?.focus();
-                  }}
-                >
-                  <Icon name="folder" /> {suggestion}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {jumpError && (
-            <div className="jump-error">
-              <Icon name="exclamation-triangle" /> {jumpError}
-            </div>
-          )}
-        </div>
-
-        {/* Local search toggle for current page */}
-        <div className="local-search-controls">
-          <button
-            onClick={() => setShowLocalSearch(!showLocalSearch)}
-            className={`local-search-toggle ${showLocalSearch ? 'active' : ''}`}
-          >
-            <Icon name="search" /> Search Current Page ({totalItems} items)
-          </button>
-
-          {showLocalSearch && (
-            <div className="local-search-input-wrapper">
-              <input
-                type="text"
-                value={localSearchTerm}
-                onChange={(e) => setLocalSearchTerm(e.target.value)}
-                placeholder="Filter current page..."
-                className="local-search-input"
-              />
-              {localSearchTerm && (
-                <button
-                  onClick={() => setLocalSearchTerm('')}
-                  className="local-search-clear"
-                >
-                  <Icon name="x" />
-                </button>
-              )}
-            </div>
           )}
         </div>
       </div>
 
-      <div className="folder-content">
+      {/* File Selection Toolbar */}
+      {onOpenFilesInSplit && selectedFiles.size > 0 && (
+        <FileSelectionToolbar
+          selectedCount={selectedFiles.size}
+          onOpenInSplit={handleOpenInSplit}
+          onClearSelection={handleClearSelection}
+        />
+      )}
+
+      {/* Search message */}
+      {searchMessage && (
+        <div className="search-message">
+          <Icon name="info-circle" /> {searchMessage}
+        </div>
+      )}
+
+      <div className="folder-content-wrapper">
         <table className="file-table">
           <thead>
             <tr>
+              {onOpenFilesInSplit && <th className="checkbox-column"></th>}
               <th>Name</th>
               <th>Type</th>
               <th>Size</th>
@@ -309,33 +400,79 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
             </tr>
           </thead>
           <tbody>
-            {filteredFolders.map((folder) => (
-              <tr key={folder.key} className="folder-row" onClick={() => onNavigate(folder.key)}>
-                <td>
-                  <span className="file-icon">
-                    <Icon name={getFileIcon(folder.type, folder.name)} />
-                  </span>
-                  <span className="file-name">{folder.name}</span>
-                </td>
-                <td>Folder</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-              </tr>
-            ))}
-            {filteredFiles.map((file) => (
-              <tr key={file.key} className="file-row" onClick={() => onFileSelect(file.key)}>
-                <td>
-                  <span className="file-icon">
-                    <Icon name={getFileIcon(file.type, file.name)} />
-                  </span>
-                  <span className="file-name">{file.name}</span>
-                </td>
-                <td>{file.type.charAt(0).toUpperCase() + file.type.slice(1)}</td>
-                <td>{formatFileSize(file.size)}</td>
-                <td>{formatDate(file.lastModified)}</td>
-                <td>
+            {filteredFolders.map((folder) => {
+              const isFolderBookmarked = isBookmarked ? isBookmarked(currentBucket, folder.key) : false;
+
+              return (
+                <tr key={folder.key} className="folder-row" onClick={() => onNavigate(folder.key)}>
+                  {onOpenFilesInSplit && <td className="checkbox-column"></td>}
+                  <td>
+                    <span className="file-icon">
+                      <Icon name={getFileIcon(folder.type, folder.name)} />
+                    </span>
+                    <span className="file-name">{folder.name}</span>
+                  </td>
+                  <td>Folder</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>
+                    <div className="action-buttons">
+                      {onBookmarkFolder && (
+                        <button
+                          className={`bookmark-action-button ${isFolderBookmarked ? 'bookmarked' : ''}`}
+                          onClick={(e) => handleBookmarkClick(folder.key, e)}
+                          title={isFolderBookmarked ? `Remove ${folder.name} from bookmarks` : `Bookmark ${folder.name}`}
+                        >
+                          {isFolderBookmarked ? <Icon name="star-fill" /> : <Icon name="star" />}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredFiles.map((file) => {
+              const isSelected = selectedFiles.has(file.key);
+              return (
+                <tr
+                  key={file.key}
+                  className={`file-row ${isSelected ? 'selected' : ''}`}
+                  onClick={() => onFileSelect(file.key)}
+                >
+                  {onOpenFilesInSplit && (
+                    <td className="checkbox-column">
+                      <input
+                        type="checkbox"
+                        className="file-checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleFileSelection(file.key)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
+                  )}
+                  <td>
+                    <span className="file-icon">
+                      <Icon name={getFileIcon(file.type, file.name)} />
+                    </span>
+                    <span className="file-name">{file.name}</span>
+                  </td>
+                  <td>{file.type.charAt(0).toUpperCase() + file.type.slice(1)}</td>
+                  <td>{formatFileSize(file.size)}</td>
+                  <td>{formatDate(file.lastModified)}</td>
+                  <td>
                   <div className="action-buttons">
+                    {onOpenInNewTab && (
+                      <button
+                        className="open-new-tab-button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenInNewTab(file.key);
+                        }}
+                        title={`Open ${file.name} in new tab`}
+                      >
+                        <Icon name="plus-square" />
+                      </button>
+                    )}
                     <button
                       className="download-button"
                       onClick={(e) => handleDownload(file.key, file.name, e)}
@@ -353,7 +490,8 @@ export const FolderBrowser: React.FC<FolderBrowserProps> = ({
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
 

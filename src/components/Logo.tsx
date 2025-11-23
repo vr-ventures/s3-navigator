@@ -16,60 +16,42 @@ export const Logo: React.FC<LogoProps> = ({ size = 32, showText = true, classNam
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Cloud base */}
+        {/* Cloud shape matching the CloudBrowse design */}
         <path
-          d="M16 40c-4.4 0-8-3.6-8-8 0-4.4 3.6-8 8-8 1.1 0 2.1 0.2 3.1 0.6C20.3 20.1 24.9 17 30 17c6.6 0 12 5.4 12 12 0 1.3-0.2 2.5-0.6 3.7C43.3 33.4 45 35.5 45 38c0 3.3-2.7 6-6 6H16z"
-          fill="currentColor"
-          opacity="0.8"
+          d="M12 42c-4.4 0-8-3.6-8-8s3.6-8 8-8c1.3 0 2.5 0.3 3.6 0.8C17.8 21.2 23.1 17 30 17c9.4 0 17 7.6 17 17 0 1.8-0.3 3.5-0.8 5.1C49.9 40.4 52 43 52 46c0 4.4-3.6 8-8 8H12z"
+          fill="#4A9B8E"
         />
 
-        {/* Folder icon inside cloud */}
-        <path
-          d="M22 28h16c1.1 0 2 0.9 2 2v8c0 1.1-0.9 2-2 2H22c-1.1 0-2-0.9-2-2v-8c0-1.1 0.9-2 2-2z"
-          fill="white"
-          stroke="currentColor"
-          strokeWidth="1"
-        />
-
-        {/* Navigation compass needle */}
+        {/* Network diagram inside cloud - larger, more visible nodes */}
+        {/* Central node (largest) */}
         <circle
-          cx="48"
-          cy="16"
-          r="12"
-          fill="currentColor"
-          opacity="0.9"
-        />
-        <path
-          d="M48 8l3 6-3 2-3-2z"
-          fill="white"
-        />
-        <path
-          d="M48 24l-3-6 3-2 3 2z"
-          fill="white"
-          opacity="0.7"
-        />
-        <circle
-          cx="48"
-          cy="16"
-          r="2"
+          cx="32"
+          cy="32"
+          r="3"
           fill="white"
         />
 
-        {/* Connection lines */}
-        <path
-          d="M36 16h6"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          opacity="0.6"
-        />
-        <path
-          d="M42 20l4-4"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          opacity="0.6"
-        />
+        {/* Primary nodes */}
+        <circle cx="32" cy="22" r="2.5" fill="white" />
+        <circle cx="32" cy="42" r="2.5" fill="white" />
+        <circle cx="22" cy="32" r="2.5" fill="white" />
+        <circle cx="42" cy="32" r="2.5" fill="white" />
+
+        {/* Secondary nodes */}
+        <circle cx="25" cy="25" r="2" fill="white" />
+        <circle cx="39" cy="25" r="2" fill="white" />
+        <circle cx="25" cy="39" r="2" fill="white" />
+        <circle cx="39" cy="39" r="2" fill="white" />
+
+        {/* Connection lines - thicker and more visible */}
+        <path d="M32 29L32 25" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        <path d="M32 35L32 39" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        <path d="M29 32L25 32" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        <path d="M35 32L39 32" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        <path d="M29.5 29.5L27 27" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        <path d="M34.5 29.5L37 27" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        <path d="M29.5 34.5L27 37" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        <path d="M34.5 34.5L37 37" stroke="white" strokeWidth="2" strokeLinecap="round" />
       </svg>
 
       {showText && (
@@ -78,7 +60,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 32, showText = true, classNam
           fontSize: size > 24 ? '1.2rem' : '1rem',
           color: 'currentColor'
         }}>
-          S3 Navigator
+          CloudBrowse
         </span>
       )}
     </div>

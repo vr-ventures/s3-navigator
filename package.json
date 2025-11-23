@@ -1,5 +1,5 @@
 {
-  "name": "s3-navigator",
+  "name": "cloudbrowse",
   "version": "1.0.0",
   "description": "A universal S3 file browser and viewer with support for JSON, Markdown, Images, and folder navigation",
   "main": "dist/main.js",
@@ -8,10 +8,11 @@
     "start": "electron .",
     "dev": "concurrently \"npm run react-start\" \"npm run electron-dev\"",
     "react-start": "react-scripts start",
-    "electron-dev": "cross-env NODE_ENV=development electron .",
+    "electron-dev": "tsc && cross-env NODE_ENV=development electron .",
     "build": "react-scripts build && tsc",
     "build:mac": "npm run build && electron-builder --mac",
     "build:mac-dmg": "npm run build && electron-builder --mac --publish=never",
+    "build:unsigned": "node build-unsigned.js",
     "build:all": "npm run build && electron-builder --mac --win --linux",
     "dist": "npm run build && electron-builder",
     "test": "react-scripts test",
@@ -29,8 +30,8 @@
   "author": "VR Enterprises",
   "license": "MIT",
   "build": {
-    "appId": "com.vrventures.s3navigator",
-    "productName": "S3 Navigator",
+    "appId": "com.vrventures.cloudbrowse",
+    "productName": "CloudBrowse",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -55,10 +56,14 @@
           ]
         }
       ],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "dmg": {
-      "title": "S3 Navigator",
+      "title": "CloudBrowse",
       "backgroundColor": "#ffffff",
       "window": {
         "width": 540,
@@ -91,7 +96,7 @@
     "@types/react-dom": "^18.0.0",
     "concurrently": "^8.0.0",
     "cross-env": "^7.0.0",
-    "electron": "^29.1.0",
+    "electron": "^29.4.6",
     "electron-builder": "^24.13.3",
     "react-scripts": "^5.0.1",
     "typescript": "^5.3.3"
@@ -105,6 +110,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.0.0",
+    "react-resizable-panels": "^3.0.6",
     "rehype-highlight": "^7.0.0",
     "remark-gfm": "^4.0.0"
   },

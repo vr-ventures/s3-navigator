@@ -5,6 +5,7 @@ export interface IElectronAPI {
   s3: {
     getObject(bucket: string, key: string): Promise<S3ObjectResult>;
     listObjects(bucket: string, prefix?: string): Promise<S3ListResult>;
+    searchObjects(bucket: string, searchTerm: string, currentPrefix?: string): Promise<S3SearchResult>;
   };
 }
 
@@ -28,6 +29,12 @@ export interface S3Item {
   name: string;
   size: number;
   lastModified: Date | null;
+  fullPath?: string; // Optional full path for search results
+}
+
+export interface S3SearchResult {
+  results: S3Item[];
+  totalFound: number;
 }
 
 declare global {
